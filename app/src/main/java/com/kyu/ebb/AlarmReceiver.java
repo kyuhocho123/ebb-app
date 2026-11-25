@@ -24,6 +24,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             .setStyle(new Notification.BigTextStyle().bigText(body))
             .setContentIntent(open)
             .setAutoCancel(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .build();
         try { nm.notify(i.getIntExtra("id", 1), n); } catch (SecurityException ignored) { }
         EbbWidget.refreshAll(c);

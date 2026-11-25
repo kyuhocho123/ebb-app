@@ -26,7 +26,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 String u = r.getUrl().toString();
-                if (u.startsWith("file:")) return false;
+                if (u.startsWith("file:///android_asset/")) return false;
                 try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception ignored) { }
                 return true;
             }

@@ -2,8 +2,9 @@ package com.kyu.ebb;
 
 import android.Manifest;
 import android.app.NotificationManager;
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
 import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -18,6 +19,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.time.ZoneOffset;
 
 /** Methods the web app calls as window.EbbNative.* */
@@ -88,6 +90,8 @@ public class Bridge {
         return out.toString();
     }
 
+    private static final String TAG = "com.kyu.ebb";
+
     /** Replace Ebb's own events in the chosen calendar. Returns "OK:n" or "ERR:msg". */
     @JavascriptInterface public String syncCalendar(String calId, String json) {
         if (!hasPerm("cal")) return "ERR:no calendar permission";
@@ -95,25 +99,25 @@ public class Bridge {
             removeOwnEvents();
             long cal = Long.parseLong(calId);
             JSONArray ev = new JSONArray(json);
-            JSONArray ids = new JSONArray();
-            ContentResolver cr = a.getContentResolver();
+            ArrayList<ContentProviderOperation> ops = new ArrayList<>();
             for (int i = 0; i < ev.length(); i++) {
                 JSONObject e = ev.getJSONObject(i);
                 LocalDate s = LocalDate.parse(e.getString("s"));
                 LocalDate end = LocalDate.parse(e.getString("e")).plusDays(1);
-                ContentValues v = new ContentValues();
-                v.put(CalendarContract.Events.CALENDAR_ID, cal);
-                v.put(CalendarContract.Events.TITLE, e.optString("t"));
-                v.put(CalendarContract.Events.DESCRIPTION, e.optString("d"));
-                v.put(CalendarContract.Events.DTSTART, s.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
-                v.put(CalendarContract.Events.DTEND, end.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
-                v.put(CalendarContract.Events.ALL_DAY, 1);
-                v.put(CalendarContract.Events.EVENT_TIMEZONE, "UTC");
-                Uri u = cr.insert(CalendarContract.Events.CONTENT_URI, v);
-                if (u != null) ids.put(Long.parseLong(u.getLastPathSegment()));
+                ops.add(ContentProviderOperation.newInsert(CalendarContract.Events.CONTENT_URI)
+                    .withValue(CalendarContract.Events.CALENDAR_ID, cal)
+                    .withValue(CalendarContract.Events.TITLE, e.optString("t"))
+                    .withValue(CalendarContract.Events.DESCRIPTION, e.optString("d"))
+                    .withValue(CalendarContract.Events.DTSTART, s.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+                    .withValue(CalendarContract.Events.DTEND, end.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+                    .withValue(CalendarContract.Events.ALL_DAY, 1)
+                    .withValue(CalendarContract.Events.EVENT_TIMEZONE, "UTC")
+                    .withValue(CalendarContract.Events.CUSTOM_APP_PACKAGE, TAG)
+                    .withValue(CalendarContract.Events.CUSTOM_APP_URI, "ebb://event")
+                    .build());
             }
-            p.edit().putString("calIds", ids.toString()).apply();
-            return "OK:" + ids.length();
+            ContentProviderResult[] res = a.getContentResolver().applyBatch(CalendarContract.AUTHORITY, ops);
+            return "OK:" + res.length;
         } catch (Exception e) {
             return "ERR:" + e.getMessage();
         }
@@ -121,20 +125,34 @@ public class Bridge {
 
     @JavascriptInterface public int clearCalendar() {
         if (!hasPerm("cal")) return 0;
-        int n = removeOwnEvents();
-        p.edit().putString("calIds", "[]").apply();
-        return n;
+        return removeOwnEvents();
     }
 
+    /**
+     * Deletes only events Ebb created: those tagged with Ebb's package name.
+     * Untagged events from older builds are removed by stored ID, but only on the phone that
+     * created them (IDs live in device-only prefs) and only if they still look like Ebb's.
+     */
     private int removeOwnEvents() {
+        ContentResolver cr = a.getContentResolver();
         int n = 0;
         try {
-            JSONArray ids = new JSONArray(p.getString("calIds", "[]"));
-            for (int i = 0; i < ids.length(); i++) {
-                Uri u = Uri.withAppendedPath(CalendarContract.Events.CONTENT_URI, String.valueOf(ids.getLong(i)));
-                n += a.getContentResolver().delete(u, null, null);
-            }
+            n += cr.delete(CalendarContract.Events.CONTENT_URI,
+                CalendarContract.Events.CUSTOM_APP_PACKAGE + "=?", new String[]{TAG});
         } catch (Exception ignored) { }
+        SharedPreferences dev = Scheduler.device(a);
+        String legacy = dev.getString("calIds", null);
+        if (legacy == null && !dev.getBoolean("legacyChecked", false)) legacy = p.getString("calIds", "[]");
+        try {
+            JSONArray ids = new JSONArray(legacy == null ? "[]" : legacy);
+            String sel = CalendarContract.Events._ID + "=? AND (" + CalendarContract.Events.DESCRIPTION + " LIKE '%Ebb%' OR "
+                + CalendarContract.Events.DESCRIPTION + " LIKE 'Estimate only%' OR " + CalendarContract.Events.TITLE + " LIKE '%(est.)%' OR "
+                + CalendarContract.Events.TITLE + " LIKE '%anniversary%' OR " + CalendarContract.Events.TITLE + " LIKE '%days')";
+            for (int i = 0; i < ids.length(); i++)
+                n += cr.delete(CalendarContract.Events.CONTENT_URI, sel, new String[]{String.valueOf(ids.getLong(i))});
+        } catch (Exception ignored) { }
+        dev.edit().remove("calIds").putBoolean("legacyChecked", true).apply();
+        p.edit().remove("calIds").apply();
         return n;
     }
 

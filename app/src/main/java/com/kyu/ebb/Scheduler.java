@@ -12,6 +12,8 @@ import org.json.JSONObject;
 /** Turns the web app's reminder list into AlarmManager alarms. */
 public class Scheduler {
     static SharedPreferences prefs(Context c) { return c.getSharedPreferences("ebb", Context.MODE_PRIVATE); }
+    /** Device-specific IDs; excluded from backup so they never land on another phone. */
+    static SharedPreferences device(Context c) { return c.getSharedPreferences("ebb_device", Context.MODE_PRIVATE); }
 
     static void set(Context c, String json) {
         cancelAll(c);
@@ -39,14 +41,14 @@ public class Scheduler {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
                 ids.put(id);
             }
-            prefs(c).edit().putString("schedIds", ids.toString()).apply();
+            device(c).edit().putString("schedIds", ids.toString()).apply();
         } catch (Exception ignored) { }
     }
 
     static void cancelAll(Context c) {
         try {
             AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
-            JSONArray ids = new JSONArray(prefs(c).getString("schedIds", "[]"));
+            JSONArray ids = new JSONArray(device(c).getString("schedIds", prefs(c).getString("schedIds", "[]")));
             for (int i = 0; i < ids.length(); i++) {
                 PendingIntent pi = PendingIntent.getBroadcast(c, ids.getInt(i), new Intent(c, AlarmReceiver.class),
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);

@@ -47,8 +47,10 @@ public class EbbWidget extends AppWidgetProvider {
                 long d = ChronoUnit.DAYS.between(s, t) + 1;
                 Period pd = Period.between(s, t);
                 top = "Day " + d;
-                sub = (pd.getYears() > 0 ? pd.getYears() + (pd.getYears() == 1 ? " yr " : " yrs ") : "")
-                    + pd.getMonths() + " mo" + (name.isEmpty() ? "" : " · " + name);
+                int yy = w.optInt("ty", -1) >= 0 ? w.optInt("ty") : pd.getYears();
+                int mo = w.optInt("tm", -1) >= 0 ? w.optInt("tm") : pd.getMonths();
+                sub = (yy > 0 ? yy + (yy == 1 ? " yr " : " yrs ") : "")
+                    + mo + " mo" + (name.isEmpty() ? "" : " · " + name);
             } else {
                 sub = name.isEmpty() ? "Cycle" : name;
             }
