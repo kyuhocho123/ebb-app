@@ -72,7 +72,7 @@ details.help{margin-top:12px}details.help summary{cursor:pointer;font-weight:500
  .bigcal .lb{font-style:normal;font-size:11.5px;line-height:1.2;padding:1px 5px;border-radius:5px;background:var(--bg);color:var(--ink);overflow-wrap:anywhere}
  .bigcal .lb.p{background:var(--berry);color:var(--onberry)}.bigcal .lb.pe{box-shadow:inset 0 0 0 1.5px var(--berry);color:var(--berry)}
  .bigcal .lb.o{background:var(--teal);color:var(--bg)}.bigcal .lb.a{background:var(--bsoft);color:var(--berry);font-weight:700}.bigcal .lb.b{color:var(--muted)}
- .bigcal .day.bleed{background:var(--bsoft);color:var(--ink)}.bigcal .day.pred,.bigcal .day.ov{box-shadow:none}
+ .bigcal .day.bleed{background:var(--bsoft);color:var(--ink)}.bigcal .day.pred,.bigcal .day.ov,.bigcal .day.auto{box-shadow:none}.bigcal .day.auto{background:transparent}
  .bigcal .day.spot::after,.bigcal .day.pilled::before{top:8px;bottom:auto;right:8px;left:auto;margin:0}
 }
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--bg);border-top:1px solid var(--line);z-index:5}
@@ -102,11 +102,19 @@ details.ev summary::after{content:"+";font-size:22px;color:var(--berry);width:1e
 #lock{position:fixed;inset:0;background:var(--bsoft);display:none;place-content:center;justify-items:center;gap:14px;z-index:20;padding:24px;text-align:center}
 #lock.on{display:grid}#lock input{max-width:200px;text-align:center;letter-spacing:.4em;font-size:24px}
 @media(max-width:600px){details.ev summary{grid-template-columns:5.6em minmax(0,1fr) auto}}
+.iconbtn{font:inherit;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--berry);background:transparent;color:var(--berry);display:grid;place-items:center;cursor:pointer;padding:0}
+.iconbtn svg{width:20px;height:20px}.iconbtn.spin svg{animation:spin .6s linear}
+#ptr{position:fixed;top:-46px;left:50%;margin-left:-20px;width:40px;height:40px;border-radius:50%;background:var(--bg);color:var(--berry);box-shadow:0 2px 10px rgba(0,0,0,.18);display:grid;place-items:center;opacity:0;z-index:30;transition:opacity .15s}
+#ptr svg{width:20px;height:20px;transition:transform .15s}#ptr.ready svg{transform:rotate(180deg)}#ptr.go svg{animation:spin .6s linear infinite}
+.day.auto{box-shadow:inset 0 0 0 2px var(--berry);background:color-mix(in srgb,var(--berry) 18%,transparent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:no-preference){main.fresh{animation:fresh .35s ease-out}@keyframes fresh{from{opacity:.25;transform:translateY(8px)}to{opacity:1;transform:none}}}
 @media(prefers-reduced-motion:no-preference){.dial .now{animation:pulse 2.4s ease-in-out infinite;transform-origin:center;transform-box:fill-box}@keyframes pulse{50%{transform:scale(1.18)}}}
 </style>
 </head>
 <body>
-<header><h1>Ebb</h1><span id="modeBadge" class="badge">Partner</span></header>
+<header><h1>Ebb</h1><span id="modeBadge" class="badge">Partner</span><button class="iconbtn" id="refreshBtn" data-a="refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button></header>
+<div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></div>
 <nav id="nav"><button data-a="tab" data-t="today">Today</button><button data-a="tab" data-t="cal">Calendar</button><button data-a="tab" data-t="us">Us</button><button data-a="tab" data-t="meds">Meds</button><button data-a="tab" data-t="more">More</button></nav>
 <main id="main"></main>
 <div id="toast" role="status"></div>
@@ -155,7 +163,7 @@ const HOLS=[['val','02-14',"Valentine's Day",'Valentine','バレンタイン · 
 
 const blank=()=>({v:3,setup:false,mode:'partner',name:'',logs:{},
  med:{method:'none',since:'',pack:'21/7',packStart:TODAY,brand:'',bleedOff:'auto',shotLast:'',shotWeeks:13,devDate:'',otherName:''},
- rel:{start:'',style:'both'},hol:{val:true,white:true,pepero:false,xmas:true},dates:[],
+ cyc:{len:'',plen:'',auto:true},rel:{start:'',style:'both'},hol:{val:true,white:true,pepero:false,xmas:true},dates:[],
  fav:{flowers:'',sweets:'',food:'',supplies:'',notes:''},
  notif:{hour:9,period:2,ann:[7,1,0],pill:false,pillTime:'21:00',ovul:false},
  cal:{id:'',name:'',periods:true,ovul:false,fertile:false,anns:true,discreet:true,last:''},
@@ -169,7 +177,7 @@ try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S&&NATIVE){try{S=JSON.parse(NATIVE.load()||'null')}catch(e){}}
 if(!S){try{const o=JSON.parse(localStorage.getItem('ebb-v1'));if(o&&o.logs){S=blank();S.logs=o.logs;S.med=Object.assign(S.med,o.med||{});S.pin=o.pin||''}}catch(e){}}
 if(!S||typeof S.logs!=='object')S=seed();
-function normalize(o){const b=blank();const r=Object.assign(b,o);for(const k of['med','rel','hol','fav','notif','cal'])r[k]=Object.assign(blank()[k],o[k]||{});if(!Array.isArray(r.dates))r.dates=[];return r}
+function normalize(o){const b=blank();const r=Object.assign(b,o);for(const k of['med','cyc','rel','hol','fav','notif','cal'])r[k]=Object.assign(blank()[k],o[k]||{});if(!Array.isArray(r.dates))r.dates=[];return r}
 S=normalize(S);
 let syncT;
 function save(){const j=JSON.stringify(S);try{localStorage.setItem(KEY,j)}catch(e){}if(NATIVE){try{NATIVE.save(j)}catch(e){}clearTimeout(syncT);syncT=setTimeout(pushNative,400)}}
@@ -186,12 +194,15 @@ function setPath(p,v){const ks=p.split('.');let o=S;while(ks.length>1)o=o[ks.shi
 /* ---------- cycle math ---------- */
 function episodes(){const days=Object.keys(S.logs).filter(k=>(S.logs[k].flow||0)>=2).sort();const eps=[];
  for(const d of days){const l=eps[eps.length-1];if(l&&diff(l.end,d)<=2)l.end=d;else eps.push({start:d,end:d})}return eps}
-function stats(){const eps=episodes();const lens=[];
- for(let i=1;i<eps.length;i++){const L=diff(eps[i-1].start,eps[i].start);if(L>=15&&L<=60)lens.push({L,start:eps[i-1].start})}
- const r=lens.slice(-6).map(x=>x.L);const avg=r.length?Math.round(r.reduce((a,b)=>a+b)/r.length):28;
- const pl=eps.slice(-6).map(e=>diff(e.start,e.end)+1);const avgP=pl.length?Math.round(pl.reduce((a,b)=>a+b)/pl.length):5;
- const sd=r.length>1?Math.sqrt(r.reduce((a,b)=>a+(b-avg)**2,0)/r.length):0;
- return{eps,lens,avg,avgP,sd,last:eps[eps.length-1]}}
+function stats(){const real=episodes();const lens=[];
+ for(let i=1;i<real.length;i++){const L=diff(real[i-1].start,real[i].start);if(L>=15&&L<=60)lens.push({L,start:real[i-1].start})}
+ const r=lens.slice(-6).map(x=>x.L);const logAvg=r.length?Math.round(r.reduce((a,b)=>a+b)/r.length):null;
+ const pl=real.slice(-6).map(e=>diff(e.start,e.end)+1);const logP=pl.length?Math.round(pl.reduce((a,b)=>a+b)/pl.length):null;
+ const avg=+S.cyc.len||logAvg||28,avgP=+S.cyc.plen||logP||5;
+ const sd=r.length>1?Math.sqrt(r.reduce((a,b)=>a+(b-logAvg)**2,0)/r.length):0;
+ const eps=real.slice();
+ if(S.cyc.auto&&M().k==='nat'&&real.length){let s=add(real[real.length-1].start,avg),g=0;while(s<=TODAY&&g++<120){eps.push({start:s,end:add(s,avgP-1),auto:true});s=add(s,avg)}}
+ return{eps,real,lens,avg,avgP,logAvg,logP,sd,last:eps[eps.length-1]}}
 function natPred(st,n){if(!st.last)return[];let s=st.last.start;const out=[];let g=0;
  while(out.length<n&&g++<500){s=add(s,st.avg);const e=add(s,st.avgP-1);if(diff(TODAY,e)>=0)out.push({start:s,end:e,ov:add(s,-14)})}return out}
 function packBase(){const[a,f]=PACKS[S.med.pack]||PACKS['21/7'];const len=a+f;const ps=valid(S.med.packStart)?S.med.packStart:TODAY;
@@ -200,7 +211,7 @@ const packDay=(p,d)=>((diff(p.ps,d)%p.len)+p.len)%p.len+1;
 function bleedTiming(p){const since=valid(S.med.since)?S.med.since:add(p.cur,-3*p.len);const eps=episodes().filter(e=>e.start>=since);
  const offs=[],lens=[];for(const e of eps){let o=packDay(p,e.start)-(p.a+1);if(o>p.len/2)o-=p.len;if(o<-p.len/2)o+=p.len;if(Math.abs(o)<=6){offs.push(o);lens.push(diff(e.start,e.end)+1)}}
  const last=offs.slice(-3).sort((x,y)=>x-y),ll=lens.slice(-3);
- const learned=last.length?last[Math.floor(last.length/2)]:null;const bl=ll.length?Math.round(ll.reduce((x,y)=>x+y)/ll.length):Math.min(p.f||5,7);
+ const learned=last.length?last[Math.floor(last.length/2)]:null;const bl=+S.cyc.plen?+S.cyc.plen:ll.length?Math.round(ll.reduce((x,y)=>x+y)/ll.length):Math.min(p.f||5,7);
  const manual=S.med.bleedOff!=='auto'&&S.med.bleedOff!=='';return{off:manual?+S.med.bleedOff:(learned??0),learned,n:last.length,bl:Math.max(2,Math.min(bl,9)),manual}}
 function packInfo(){const p=packBase();const bt=bleedTiming(p);const out=[];
  if(p.f>0)for(let k=-1;out.length<12&&k<60;k++){const s=add(p.cur,p.a+k*p.len+bt.off);const e=add(s,bt.bl-1);if(diff(TODAY,e)>=0)out.push({start:s,end:e})}
@@ -299,7 +310,8 @@ function calCtx(){const st=stats(),k=M().k,pr=preds(st,14),am=new Map();for(cons
  return{st,k,pr,am,p:k==='pack'?packBase():null}}
 function dayInfo(d,c){const l=lg(d),f=l.flow||0,cls=['day'],labs=[];
  if(f>=2){cls.push('bleed');labs.push(['p',her('Period','Period')])}else if(f===1){cls.push('spot');labs.push(['pe','Spotting'])}
- const pred=c.pr.find(p=>d>=p.start&&d<=p.end);if(f<2&&d>=TODAY&&pred){cls.push('pred');labs.push(['pe',c.k==='pack'?'Bleed (est.)':'Period (est.)'])}
+ const au=f<2&&c.st.eps.find(e=>e.auto&&d>=e.start&&d<=e.end);if(au&&d<=TODAY){cls.push('auto');labs.push(['pe','Period (auto)'])}
+ const pred=c.pr.find(p=>d>=p.start&&d<=p.end);if(f<2&&d>=TODAY&&pred&&!(au&&d===TODAY)){cls.push('pred');labs.push(['pe',c.k==='pack'?'Bleed (est.)':'Period (est.)'])}
  if(showOv()&&f<2){const ov=c.pr.find(p=>p.ov===d);if(ov&&d>=add(TODAY,-40)){cls.push('ov');labs.push(['o','Ovulation (est.)'])}else if(c.pr.some(p=>d>=add(p.ov,-5)&&d<=add(p.ov,1)))cls.push('fert')}
  if(c.p&&d>=c.p.ps){const pd=packDay(c.p,d);if(c.p.f>0&&pd===c.p.a+1)labs.push(['b','Pill break']);if(pd===1)labs.push(['b','New pack'])}
  const as=c.am.get(d)||[];if(as.length){cls.push('ann');for(const a of as)labs.push(['a',a.s])}
@@ -328,7 +340,7 @@ function dial(st){const cd=st.last?diff(st.last.start,TODAY)+1:1;const N=Math.mi
   dots+=i===cd?`<circle class="now" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="${c}" stroke="var(--ink)" stroke-width="3"/>`:`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${c}"/>`}
  let line='No period logged yet';
  if(st.last){const late=cd-st.avg-1,ph=phase(st);
-  if(ph.key==='period')line='Period, day '+cd;else if(late>0)line=plural(late,'day')+' late';
+  if(ph.key==='period')line=(st.last.auto?'Period likely, day ':'Period, day ')+cd;else if(late>0)line=plural(late,'day')+' late';
   else{const to=st.avg+1-cd;line=to===0?'Period likely today':'Period in '+plural(to,'day')}}
  const isOv=st.last&&showOv()&&cd===ov,fert=st.last&&showOv()&&cd>=ov-5&&cd<=ov+1;
  return `<svg class="dial" viewBox="0 0 300 300" role="img" aria-label="Cycle day ${cd}. ${esc(line)}">
@@ -351,7 +363,7 @@ function stripView(){let h='',b=0;for(let i=89;i>=0;i--){const d=add(TODAY,-i);c
  if(M().dev&&valid(m.devDate)){const dd=diff(TODAY,m.devDate);cd=`<p class="status">Replacement due ${fmtW(m.devDate)}${dd<120?' ('+inDays(dd).toLowerCase()+')':''}</p>`}
  if((M().shot&&!valid(m.shotLast))||(M().dev&&!valid(m.devDate)))cd='<p class="muted">Add the date on the Meds tab to get a countdown and reminder.</p>';
  return `<p class="muted" style="margin-top:8px">Last 90 days</p><div class="strip" role="img" aria-label="Bleeding on ${b} of the last 90 days">${h}</div><p class="status">Bleeding or spotting on ${b} of the last 90 days</p>${cd}`}
-function logPeriodCard(st){const eps=st.eps.slice(-4).reverse();const defEnd=add(TODAY,0);
+function logPeriodCard(st){const eps=st.real.slice(-4).reverse();const defEnd=add(TODAY,0);
  return `<div class="card"><h3>Log ${her('her','a')} period</h3><div class="cols" style="gap:10px">
  <div><label for="lp-s">Started on</label><input type="date" id="lp-s" value="${TODAY}" max="${TODAY}"></div>
  <div><label for="lp-e">Ended on (optional)</label><input type="date" id="lp-e" max="${defEnd}"></div></div>
@@ -388,7 +400,7 @@ function cal(){const c=calCtx();const inf=dayInfo(sel,c);
 /* ---------- Us ---------- */
 function us(){const t=together(),list=anns(400).slice(0,12);
  const hero=t?`<section class="hero"><p class="muted">${esc(PT()?'You & '+(S.name||'her'):'Together')} · since ${fmtY(S.rel.start)}</p><div class="dplus">Day ${t.dd.toLocaleString('en-US')}</div>
-  <p class="status">${t.dd.toLocaleString('en-US')} days together · ${t.en}</p><p class="muted">${t.dd}일째 · ${t.jp}</p>${styleChips()}</section>`
+  <p class="status">${t.dd.toLocaleString('en-US')} days together · ${t.en}</p><p class="muted">${t.dd}일째 · ${t.jp}</p>${styleChips()}<details class="help"><summary>Change the day you started dating</summary><input type="date" data-s="rel.start" value="${esc(S.rel.start)}" max="${TODAY}" style="max-width:260px" aria-label="Day you started dating"></details></section>`
   :`<section class="hero"><h2 style="margin-top:12px">Anniversaries</h2><p class="muted">Korean couples celebrate every 100 days (100일). Japanese couples celebrate every month (1ヶ月記念日). Ebb can do both.</p>
   <label for="u-rel">Day you started dating</label><input type="date" id="u-rel" data-s="rel.start" value="${esc(S.rel.start)}" max="${TODAY}" style="max-width:260px">${styleChips()}</section>`;
  const evs=list.length?list.map(a=>{const n=diff(TODAY,a.d);const ideas=(IDEAS[a.k]||IDEAS.custom).map(x=>`<li>${esc(fill(x))}</li>`).join('');
@@ -418,9 +430,16 @@ function meds(){const m=S.med,X=M();const opt=Object.entries(METHODS).map(([k,v]
  if(X.dev)extra=`<label for="f-dv">Replacement or check-up due</label><input type="date" id="f-dv" data-f="devDate" value="${esc(m.devDate)}">`;
  if(X.other)extra=`<label for="f-on">Medication name (optional)</label><input id="f-on" data-f="otherName" maxlength="60" value="${esc(m.otherName)}" placeholder="Stays on this device">`;
  const since=m.method==='none'?'':`<label for="f-si">Started this method on (optional)</label><input type="date" id="f-si" data-f="since" value="${esc(m.since)}" max="${TODAY}"><small>Lets Insights compare cycles before and after.</small>`;
- return `<div class="cols"><div class="card"><h2>${her('Her meds & birth control','Meds & birth control')}</h2>
+ const st=stats();const lenOpts=['',...Array.from({length:25},(_,i)=>i+20)].map(v=>`<option value="${v}" ${String(S.cyc.len)===String(v)?'selected':''}>${v?v+' days':'Auto'+(st.logAvg?' (from logs: '+st.logAvg+')':' (28)')}</option>`).join('');
+ const plOpts=['',2,3,4,5,6,7,8,9].map(v=>`<option value="${v}" ${String(S.cyc.plen)===String(v)?'selected':''}>${v?v+' days':'Auto'+(st.logP?' (from logs: '+st.logP+')':' (5)')}</option>`).join('');
+ const basics=`<div class="card"><h2>${her('Her cycle basics','Cycle basics')}</h2><p class="muted">Ebb predicts from these. You only need to log when something is different.</p>
+ ${X.k!=='irr'?`<label for="c-auto">Keep predictions rolling</label><div class="row"><button class="chip t" id="c-auto" data-a="autotog" aria-pressed="${!!S.cyc.auto}">${S.cyc.auto?'On: assume each predicted period happened':'Off: wait for logs'}</button></div>`:''}
+ ${X.k==='nat'?`<label for="c-len">Usual cycle length (start to start)</label><select id="c-len" data-s="cyc.len">${lenOpts}</select>`:''}
+ ${X.k!=='irr'?`<label for="c-pl">Usual period length</label><select id="c-pl" data-s="cyc.plen">${plOpts}</select>`:''}
+ <p class="muted" style="margin-top:10px">${X.k==='pack'?'On the pill, the pack schedule sets the dates, so they keep coming automatically.':X.k==='nat'?'If she mentions her period started on a different day, log that one date and everything after it shifts.':'On this method bleeding has no fixed rhythm, so there are no dates to roll forward.'}</p></div>`;
+ return `<div class="cols"><div>${basics}<div class="card"><h2>${her('Her meds & birth control','Meds & birth control')}</h2>
  <label for="f-m">${her('What is '+esc(S.name||'she')+' on?','What are you on?')}</label><select id="f-m" data-f="method">${opt}</select>
- <div class="note t">${esc(X.d)}</div>${extra}${since}</div>
+ <div class="note t">${esc(X.d)}</div>${extra}${since}</div></div>
  <div>${side}<div class="card"><h3>How Ebb adapts</h3><ul class="list"><li><span>No hormones, copper IUD, other meds</span><b>Dial + ovulation</b></li><li><span>Combined pill, patch, ring</span><b>Pack view</b></li><li><span>Mini-pill, hormonal IUD, implant, injection</span><b>90-day pattern</b></li></ul>
  <p class="muted" style="margin-top:10px">Ebb gives no medical advice; a prescriber or pharmacist does.</p></div></div></div>`}
 
@@ -473,6 +492,7 @@ function calSection(){const ev=calEvents();const opts=[['anns','Anniversaries'],
 function settings(){return `<div class="cols"><div class="card"><h2>Settings</h2>
  <label>Mode</label><div class="row"><button class="chip" data-a="mode" data-v="partner" aria-pressed="${PT()}">Tracking my girlfriend</button><button class="chip" data-a="mode" data-v="self" aria-pressed="${!PT()}">Tracking myself</button></div>
  ${PT()?`<label for="st-n">Her name</label><input id="st-n" data-s="name" maxlength="30" value="${esc(S.name)}">`:''}
+ <label for="st-rel">Day you started dating</label><input type="date" id="st-rel" data-s="rel.start" value="${esc(S.rel.start)}" max="${TODAY}" style="max-width:260px">
  <label for="pinSet">${S.pin?'PIN is on':'Set a 4-digit PIN'}</label><div class="row"><input id="pinSet" inputmode="numeric" maxlength="4" style="max-width:140px" placeholder="1234"><button class="btn" data-a="pinset">${S.pin?'Change':'Set PIN'}</button>${S.pin?'<button class="btn ghost" data-a="pinoff">Remove</button>':''}</div>
  <p class="muted" style="margin-top:14px">${PAYWALL?'':'Personal build: every feature is unlocked.'}</p></div>
  <div class="card"><h3>Your data</h3><p class="muted">Everything stays on this device${NATIVE?'':' (this browser)'}. Calendar sync only sends the events you choose to your calendar.</p>
@@ -483,6 +503,7 @@ function moreV(){const subs=[['ins','Insights'],['rem','Reminders'],['gcal','Cal
 
 /* ---------- plumbing ---------- */
 let rendering=false;
+function flash(){const m=$('#main');m.classList.remove('fresh');void m.offsetWidth;m.classList.add('fresh')}
 function render(){if(rendering)return;rendering=true;try{const ae=document.activeElement;if(ae&&ae!==document.body&&$('#main').contains(ae))ae.blur();$('#main').innerHTML={today,cal,us,meds,more:moreV}[tab]()}finally{rendering=false}
  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.t===tab));
  $('#modeBadge').textContent=PT()?(S.name?'With '+S.name:'Partner mode'):'My cycle'}
@@ -498,6 +519,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t
  if(a!=='clear')armClear=false;
  if(a==='tab'){tab=t.dataset.t;if(tab==='today')sel=TODAY;window.scrollTo(0,0)}
  else if(a==='more')more=v;
+ else if(a==='refresh'){refresh();return}
+ else if(a==='autotog'){S.cyc.auto=!S.cyc.auto;save();render();flash();return}
  else if(a==='flow'){setLog(sel,{flow:+v});save()}
  else if(a==='sym'){const s=new Set(lg(sel).sym||[]);s.has(v)?s.delete(v):s.add(v);setLog(sel,{sym:[...s]});save()}
  else if(a==='mood'){setLog(sel,{mood:lg(sel).mood===v?'':v});save()}
@@ -544,7 +567,16 @@ document.addEventListener('change',e=>{const el=e.target;const f=el.dataset.f,s=
   else if(f==='pack'){const old=packBase();S.med.pack=v;const keep=Math.min(old.day,packBase().len);S.med.packStart=add(TODAY,-(keep-1));S.med.brand=''}
   else{if(f==='shotWeeks')v=Math.max(1,Math.min(52,+v||13));if(f==='method'&&v==='none')S.med.since='';S.med[f]=v}}
  else{if(el.dataset.num)v=+v;setPath(s,v);if(s==='cal.id'&&v){save();calSync(false)}}
- save();render();if(!s||s!=='cal.id')toast('Saved')});
+ save();render();flash();if(!s||s!=='cal.id')toast('Updated')});
+let liveT;document.addEventListener('input',e=>{const el=e.target;if(el.dataset.f!=='todayPill'&&el.type!=='date')return;clearTimeout(liveT);liveT=setTimeout(()=>{if(document.body.contains(el))el.dispatchEvent(new Event('change',{bubbles:true}))},700)});
+function refresh(){if(d2s(new Date())!==TODAY){location.reload();return}
+ try{const j=localStorage.getItem(KEY);if(j)S=normalize(JSON.parse(j))}catch(e){}
+ pushNative();render();flash();const b=$('#refreshBtn');b.classList.remove('spin');void b.offsetWidth;b.classList.add('spin');toast('Up to date')}
+{const ptr=$('#ptr');let y0=null,dy=0;
+ addEventListener('touchstart',e=>{y0=(scrollY<=0&&e.touches.length===1)?e.touches[0].clientY:null;dy=0},{passive:true});
+ addEventListener('touchmove',e=>{if(y0===null)return;dy=e.touches[0].clientY-y0;if(dy<=0||scrollY>0){ptr.style.opacity=0;return}const d=Math.min(dy,140);ptr.style.transform='translateY('+(d*0.6+10)+'px)';ptr.style.opacity=Math.min(1,dy/70);ptr.classList.toggle('ready',dy>80)},{passive:true});
+ addEventListener('touchend',()=>{if(y0===null)return;const go=dy>80&&scrollY<=0;y0=null;
+  if(go){ptr.classList.add('go');setTimeout(()=>{refresh();ptr.classList.remove('go','ready');ptr.style.opacity=0;ptr.style.transform=''},450)}else{ptr.classList.remove('ready');ptr.style.opacity=0;ptr.style.transform=''}})}
 $('#pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('[data-a=unlockpin]').click()});
 window.ebbPerm=(k,ok)=>{toast(ok?'Allowed':'Permission not given');if(ok)pushNative();render()};
 window.ebbResume=()=>{if(d2s(new Date())!==TODAY)location.reload()};
