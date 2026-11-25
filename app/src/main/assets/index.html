@@ -162,7 +162,7 @@ const FLOWS=['None','Spotting','Light','Medium','Heavy'];
 const HOLS=[['val','02-14',"Valentine's Day",'Valentine','バレンタイン · 발렌타인',"In Japan and Korea she traditionally gives chocolate"],['white','03-14','White Day','White Day','ホワイトデー · 화이트데이','Your turn to give back'],['pepero','11-11','Pepero Day','Pepero','빼빼로데이','Korean couples swap Pepero'],['xmas','12-24','Christmas Eve','Xmas Eve','クリスマスイブ',"Japan's big date night"]];
 
 const blank=()=>({v:3,setup:false,mode:'partner',name:'',logs:{},
- med:{method:'none',since:'',pack:'21/7',packStart:TODAY,brand:'',bleedOff:'auto',shotLast:'',shotWeeks:13,devDate:'',otherName:''},
+ med:{method:'none',since:'',pack:'21/7',packStart:TODAY,brand:'',bleedOff:'auto',ignore:[],shotLast:'',shotWeeks:13,devDate:'',otherName:''},
  cyc:{len:'',plen:'',auto:true},rel:{start:'',style:'both'},hol:{val:true,white:true,pepero:false,xmas:true},dates:[],
  fav:{flowers:'',sweets:'',food:'',supplies:'',notes:''},
  notif:{hour:9,period:2,ann:[7,1,0],pill:false,pillTime:'21:00',ovul:false},
@@ -208,13 +208,15 @@ function natPred(st,n){if(!st.last)return[];let s=st.last.start;const out=[];let
 function packBase(){const[a,f]=PACKS[S.med.pack]||PACKS['21/7'];const len=a+f;const ps=valid(S.med.packStart)?S.med.packStart:TODAY;
  const off=diff(ps,TODAY);const day=((off%len)+len)%len+1;return{a,f,len,ps,day,cur:add(TODAY,-(day-1)),inFree:day>a}}
 const packDay=(p,d)=>((diff(p.ps,d)%p.len)+p.len)%p.len+1;
-function bleedTiming(p){const since=valid(S.med.since)?S.med.since:add(p.cur,-3*p.len);const eps=episodes().filter(e=>e.start>=since);
- const offs=[],lens=[];for(const e of eps){let o=packDay(p,e.start)-(p.a+1);if(o>p.len/2)o-=p.len;if(o<-p.len/2)o+=p.len;if(Math.abs(o)<=6){offs.push(o);lens.push(diff(e.start,e.end)+1)}}
- const last=offs.slice(-3).sort((x,y)=>x-y),ll=lens.slice(-3);
- const learned=last.length?last[Math.floor(last.length/2)]:null;const bl=+S.cyc.plen?+S.cyc.plen:ll.length?Math.round(ll.reduce((x,y)=>x+y)/ll.length):Math.min(p.f||5,7);
+const rawOff=(p,d)=>{let o=packDay(p,d)-(p.a+1);if(o>p.len/2)o-=p.len;if(o<-p.len/2)o+=p.len;return o};
+function bleedTiming(p){const since=valid(S.med.since)?S.med.since:add(p.cur,-3*p.len);const ign=S.med.ignore||[];const eps=episodes().filter(e=>e.start>=since&&!ign.includes(e.start));
+ const offs=[],lens=[];for(const e of eps){const o=rawOff(p,e.start);if(Math.abs(o)<=10){offs.push(o);lens.push(diff(e.start,e.end)+1)}}
+ const last=offs.slice(-3),ll=lens.slice(-3);
+ const learned=last.length?last[last.length-1]:null;const bl=+S.cyc.plen?+S.cyc.plen:ll.length?Math.round(ll.reduce((x,y)=>x+y)/ll.length):Math.min(p.f||5,7);
  const manual=S.med.bleedOff!=='auto'&&S.med.bleedOff!=='';return{off:manual?+S.med.bleedOff:(learned??0),learned,n:last.length,bl:Math.max(2,Math.min(bl,9)),manual}}
-function packInfo(){const p=packBase();const bt=bleedTiming(p);const out=[];
- if(p.f>0)for(let k=-1;out.length<12&&k<60;k++){const s=add(p.cur,p.a+k*p.len+bt.off);const e=add(s,bt.bl-1);if(diff(TODAY,e)>=0)out.push({start:s,end:e})}
+function packInfo(){const p=packBase();const bt=bleedTiming(p);const out=[];const real=episodes();
+ if(p.f>0)for(let k=-2;out.length<12&&k<60;k++){const s=add(p.cur,p.a+k*p.len+bt.off);const e=add(s,bt.bl-1);
+  if(real.some(r=>{const x=diff(s,r.start);return x>=-10&&x<=6}))continue;if(diff(TODAY,e)>=0)out.push({start:s,end:e})}
  return Object.assign(p,{bt,bleeds:out})}
 function preds(st,n){const k=M().k;if(k==='nat')return natPred(st,n);if(k==='pack')return packInfo().bleeds.slice(0,n);return[]}
 const showOv=()=>M().k==='nat'&&S.med.method!=='copper';
@@ -321,7 +323,7 @@ function monthGrid(big){const c=calCtx();const[y,m]=view.split('-').map(Number);
  let cells='';for(let i=0;i<first.getDay();i++)cells+='<span class="day blank"></span>';
  for(let i=1;i<=days;i++){const d=view+'-'+pad(i),inf=dayInfo(d,c);
   cells+=`<button class="${inf.cls.join(' ')}" data-a="day" data-d="${d}" aria-label="${fmtW(d)}${inf.labs.length?': '+esc(inf.labs.map(x=>x[1]).join(', ')):''}">${inf.as.length?'<span class="star" aria-hidden="true">✦</span>':''}<span class="dn">${i}</span><span class="labs">${inf.labs.slice(0,3).map(([t,x])=>`<i class="lb ${t}">${esc(x)}</i>`).join('')}</span></button>`}
- return `<div class="row" style="justify-content:space-between"><button class="chip" data-a="mon" data-v="-1" aria-label="Previous month">Prev</button><h2 style="margin:0">${first.toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h2><div class="row"><button class="chip" data-a="mon" data-v="0">Today</button><button class="chip" data-a="mon" data-v="1" aria-label="Next month">Next</button></div></div>
+ return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${first.toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h2><div class="row"><button class="chip" data-a="mon" data-v="-1" aria-label="Previous month">Prev</button><button class="chip" data-a="mon" data-v="0">Today</button><button class="chip" data-a="mon" data-v="1" aria-label="Next month">Next</button></div></div>
  <div class="cal ${big?'bigcal':''}" style="margin-top:12px">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<span class="wd">${w}</span>`).join('')}${cells}</div>
  <div class="legend"><span><i style="background:var(--berry)"></i>Period</span><span><i style="box-shadow:inset 0 0 0 2px var(--berry)"></i>Predicted</span>${showOv()?'<span><i style="background:var(--teal)"></i>Ovulation (est.)</span><span><i style="background:var(--tsoft)"></i>Fertile (est.)</span>':''}<span>✦ Anniversary</span></div>`}
 
@@ -386,9 +388,13 @@ function today(){const st=stats(),k=M().k;const hero=k==='pack'?blister():k==='i
  const quick=`<div class="row" style="justify-content:center;margin-top:10px">${M().pill?`<button class="btn ${l.pill?'ghost':''}" data-a="pilltoday">${l.pill?her('She took today’s pill','Pill taken today'):her('She took today’s pill?','Take today’s pill')}</button>`:''}
   <button class="btn ${M().pill?'ghost':''}" data-a="quick">${(l.flow||0)>=2?'Bleed logged today':her('Her period started today',k==='nat'?'Period started today':'Bleeding started today')}</button></div>`;
  const ovLine=ov?`<p class="status" style="color:var(--teal)">Ovulation (est.): ${fmtW(ov)} · ${inDays(diff(TODAY,ov)).toLowerCase()}</p>`:'';
+ let mis='';if(k==='pack'){const p=packBase(),last=stats().real.slice(-1)[0];
+  if(last&&diff(last.start,TODAY)<=14&&!(S.med.ignore||[]).includes(last.start)){const o=rawOff(p,last.start);
+   if(Math.abs(o)>=3&&p.f>0)mis=`<div class="note"><b>${her('Her','The')} bleed on ${fmt(last.start)} came ${plural(Math.abs(o),'day')} ${o<0?'before':'after'} the pill break.</b> ${Math.abs(o)<=10?'Ebb now uses it: this cycle is counted and the next bleeds shift to match.':'That is too far from the break for Ebb to use, so the pack day may be off.'}
+   <div class="row" style="margin-top:8px"><button class="chip" data-a="lineup" data-v="${last.start}">Line up the pack to this bleed</button><button class="chip" data-a="ignoreep" data-v="${last.start}">It was breakthrough bleeding</button></div></div>`}}
  const miss=missedYesterday()?`<div class="note"><b>No pill logged yesterday.</b> If you missed it, check the leaflet or ask a pharmacist what to do, since protection can be reduced. <button class="chip" data-a="pillyest" style="margin-top:8px">I took it, log it</button></div>`:'';
  const up=k==='irr'?`<p class="muted">${esc(M().d)}</p>`:pr.length?`<ul class="list">${pr.map(p=>`<li><span>${k==='pack'?'Withdrawal bleed':her(esc(NAME())+"'s period",'Period')}</span><b>${fmt(p.start)} – ${fmt(p.end)}</b></li>`).join('')}${showOv()?natPred(st,2).map(p=>`<li><span>Ovulation (est.)</span><b>${fmtW(p.ov)}</b></li><li><span>Fertile window (est.)</span><b>${fmt(add(p.ov,-5))} – ${fmt(add(p.ov,1))}</b></li>`).join(''):''}</ul>${k==='nat'?'<p class="muted" style="margin-top:8px">Ovulation is estimated as 14 days before the next predicted period. Estimates only, not birth control.</p>':''}`:'<p class="muted">Log a period to see predictions.</p>';
- return `${S.setup?'':setupCard()}<div class="tgrid"><div><section class="hero"><div class="cols" style="align-items:center"><div>${hero}</div><div><p class="muted">${esc(M().l)}${S.sample?' · sample data, clear it in More › Settings':''}</p>${ovLine}${quick}${miss}</div></div></section>
+ return `${S.setup?'':setupCard()}<div class="tgrid"><div><section class="hero"><div class="cols" style="align-items:center"><div>${hero}</div><div><p class="muted">${esc(M().l)}${S.sample?' · sample data, clear it in More › Settings':''}</p>${ovLine}${quick}${mis}${miss}</div></div></section>
  <div class="cols">${careCard(st)}${nextAnnCard()}<div class="card"><h3>Coming up</h3>${up}</div>${logPeriodCard(st)}${logPanel(sel=TODAY)}</div></div>
  <div class="wideonly"><div class="card">${monthGrid(true)}</div></div></div>`}
 
@@ -520,6 +526,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t
  if(a==='tab'){tab=t.dataset.t;if(tab==='today')sel=TODAY;window.scrollTo(0,0)}
  else if(a==='more')more=v;
  else if(a==='refresh'){refresh();return}
+ else if(a==='lineup'){const p=packBase();S.med.packStart=add(v,-p.a);S.med.bleedOff='auto';S.med.ignore=(S.med.ignore||[]).filter(x=>x!==v);save();render();flash();toast('Pack lined up: break started '+fmt(v));return}
+ else if(a==='ignoreep'){S.med.ignore=[...(S.med.ignore||[]),v];save();render();flash();toast('Ignored for predictions');return}
  else if(a==='autotog'){S.cyc.auto=!S.cyc.auto;save();render();flash();return}
  else if(a==='flow'){setLog(sel,{flow:+v});save()}
  else if(a==='sym'){const s=new Set(lg(sel).sym||[]);s.has(v)?s.delete(v):s.add(v);setLog(sel,{sym:[...s]});save()}
