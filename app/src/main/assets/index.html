@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ebb Cycle & Us</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm and private; plain and careful about meds and health.
+   IDEA: a pocket planner for two: a pill pack / cycle dial on one page, a 記念日 countdown on the other.
+   PICTURE: cycle dial, blister pack or 90-day strip; on Us, a large D+ day count with the Japanese month count beneath.
+   COLOUR and TYPE: white ground, berry red dominant, deep wine ink, teal accent. Fraunces 600 + DM Sans; system fonts offline.
+   LAYOUT: phone-first single column, bottom tab bar; two columns above 760px. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#150a0f);--ink:light-dark(#2a0f1a,#f7eaef);--muted:light-dark(#7d5b68,#bf9eaa);
+--berry:light-dark(#b8144f,#ff6f98);--onberry:light-dark(#fff,#2a0010);--bsoft:light-dark(#fce6ed,#3a1322);
+--teal:light-dark(#0d7a74,#4fd1c5);--tsoft:light-dark(#dcf3f1,#0f2e2c);
+--card:light-dark(#fff8fa,#1f1017);--line:light-dark(#f1dde4,#341a25);--line2:light-dark(#ead0d9,#4a2635);--warn:light-dark(#8a4b00,#ffc477);--wsoft:light-dark(#fff1dc,#33230c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "DM Sans",system-ui,"Hiragino Sans","Noto Sans JP","Noto Sans KR",sans-serif;overflow-x:clip;padding-bottom:84px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:26px}h2{font-size:22px;margin-bottom:10px}h3{font-size:17px;margin-bottom:6px}
+p{margin:0 0 10px}small,.muted{color:var(--muted);font-size:14px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px max(4vw,14px);background:var(--bsoft)}
+.badge{font-size:13px;font-weight:700;padding:4px 10px;border-radius:99px;color:var(--berry);border:1.5px solid var(--berry);white-space:nowrap}
+main{max-width:980px;margin:0 auto;padding:0 max(4vw,14px)}
+.hero{background:var(--bsoft);margin:0 calc(-1*max(4vw,14px));padding:8px max(4vw,14px) 26px;text-align:center}
+.cols{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:760px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.hero{text-align:start}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:16px}
+.dial{width:100%;max-width:320px;display:block;margin:0 auto}
+.status{font-size:17px;font-weight:500}
+.btn{font:inherit;font-weight:700;min-height:44px;padding:10px 18px;border-radius:99px;border:0;background:var(--berry);color:var(--onberry);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.btn.ghost{background:transparent;color:var(--berry);border:1.5px solid var(--berry)}
+.btn:focus-visible,.chip:focus-visible,select:focus-visible,input:focus-visible,nav button:focus-visible,summary:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font:inherit;font-size:15px;min-height:44px;padding:8px 14px;border-radius:99px;border:1.5px solid var(--line2);background:var(--bg);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.chip[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:var(--onberry)}
+.chip.t[aria-pressed=true]{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+label{display:block;font-weight:500;margin:12px 0 6px}
+select,input,textarea{font:inherit;font-size:16px;width:100%;min-height:44px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line2);background:var(--bg);color:var(--ink)}
+textarea{min-height:140px;font:14px/1.4 ui-monospace,monospace}
+.note{background:var(--wsoft);color:var(--warn);border-radius:14px;padding:12px 14px;margin-top:12px;font-size:15px}
+.note.t{background:var(--tsoft);color:var(--ink)}
+.blister{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;max-width:330px;margin:10px auto;padding:16px;border-radius:24px;background:var(--bg);box-shadow:0 2px 0 var(--line2),inset 0 0 0 1px var(--line)}
+.pill{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--berry);color:var(--onberry);box-shadow:inset -3px -4px 0 rgba(0,0,0,.18)}
+.pill.free{background:var(--line2);color:var(--ink)}.pill.taken{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 2px var(--line2)}
+.pill.now{outline:3px solid var(--teal);outline-offset:2px}
+.strip{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:4px;max-width:360px;margin:12px auto}
+.sq{aspect-ratio:1;border-radius:4px;background:var(--line)}.sq.f1{background:var(--berry);opacity:.35}.sq.f2,.sq.f3,.sq.f4{background:var(--berry)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .wd{font-size:13px;color:var(--muted);text-align:center;padding:4px 0}
+.day{font:inherit;font-size:15px;aspect-ratio:1;min-height:40px;border-radius:12px;border:0;background:transparent;color:var(--ink);cursor:pointer;position:relative}
+.day.bleed{background:var(--berry);color:var(--onberry)}.day.spot::after{content:"";position:absolute;bottom:5px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--berry)}
+.day.pred{box-shadow:inset 0 0 0 2px var(--berry)}.day.fert{background:var(--tsoft)}
+.day.pilled::before{content:"";position:absolute;top:5px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--teal)}
+.day.ann .star{position:absolute;top:2px;left:5px;font-size:10px;color:var(--teal)}
+.day.today{font-weight:700;text-decoration:underline;text-underline-offset:3px}.day.sel{outline:3px solid var(--teal);outline-offset:-1px}
+.day.fut{color:var(--muted)}.day.bleed.fut{color:var(--onberry)}.day.blank{visibility:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:4px}
+.list{list-style:none;padding:0;margin:0}.list li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.list li:last-child{border:0}.list b{white-space:nowrap;flex:none}
+.tips{margin:6px 0 0;padding-left:20px}.tips li{margin:6px 0}
+.big{font-family:Fraunces,Georgia,serif;font-size:clamp(32px,8vw,44px);line-height:1}
+.dplus{font-family:Fraunces,Georgia,serif;font-size:clamp(56px,16vw,88px);line-height:1;color:var(--berry);margin:6px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.bar{display:grid;grid-template-columns:5.5em minmax(0,1fr) 3em;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+.bar span:nth-child(2){height:14px;border-radius:7px;background:var(--berry)}.bar span:last-child{text-align:right}
+details.ev{border-bottom:1px solid var(--line);padding:4px 0}details.ev:last-child{border:0}
+details.ev summary{display:grid;grid-template-columns:6.5em minmax(0,1fr) auto;gap:10px;align-items:center;cursor:pointer;list-style:none;min-height:52px;padding:6px 0}
+details.ev summary::-webkit-details-marker{display:none}
+details.ev summary::after{content:"+";font-size:22px;color:var(--berry);width:1em;text-align:center}details.ev[open] summary::after{content:"–"}
+.ev .dd b{display:block;white-space:nowrap}.ev small{display:block}
+.ev .body{padding:0 0 12px}
+.subtabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0 2px}.subtabs .chip{flex:none}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--bg);border-top:1px solid var(--line);z-index:5}
+nav button{font:inherit;font-size:14px;font-weight:500;flex:1;max-width:150px;min-height:62px;border:0;background:none;color:var(--muted);cursor:pointer;border-top:3px solid transparent}
+nav button[aria-current=true]{color:var(--berry);border-top-color:var(--berry)}
+#toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+#lock{position:fixed;inset:0;background:var(--bsoft);display:none;place-content:center;justify-items:center;gap:14px;z-index:20;padding:24px;text-align:center}
+#lock.on{display:grid}#lock input{max-width:200px;text-align:center;letter-spacing:.4em;font-size:24px}
+table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+@media(max-width:600px){details.ev summary{grid-template-columns:5.6em minmax(0,1fr) auto}}
+@media(prefers-reduced-motion:no-preference){.dial .now{animation:pulse 2.4s ease-in-out infinite;transform-origin:center;transform-box:fill-box}@keyframes pulse{50%{transform:scale(1.18)}}}
+</style>
+</head>
+<body>
+<header><h1>Ebb</h1><span id="modeBadge" class="badge">Partner</span></header>
+<main id="main"></main>
+<nav id="nav"><button data-a="tab" data-t="today">Today</button><button data-a="tab" data-t="cal">Calendar</button><button data-a="tab" data-t="us">Us</button><button data-a="tab" data-t="meds">Meds</button><button data-a="tab" data-t="more">More</button></nav>
+<div id="toast" role="status"></div>
+<div id="lock"><h2>Ebb is locked</h2><p class="muted">Enter your 4-digit PIN</p><input id="pinIn" inputmode="numeric" maxlength="4" aria-label="PIN"><button class="btn" data-a="unlockpin">Unlock</button></div>
+<script>
+{
+const NATIVE=(typeof window.EbbNative==='object'&&window.EbbNative)?window.EbbNative:null;
+const PAYWALL=false; // personal build: set true later to bring back Ebb Plus
+const KEY='ebb-v2';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const d2s=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const s2d=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const add=(s,n)=>{const d=s2d(s);d.setDate(d.getDate()+n);return d2s(d)};
+const addM=(s,m)=>{const[y,mo,d]=s.split('-').map(Number);const t=new Date(y,mo-1+m,1);const dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();t.setDate(Math.min(d,dim));return d2s(t)};
+const ymd=(y,md)=>{const[m,d]=md.split('-').map(Number);const dim=new Date(y,m,0).getDate();return d2s(new Date(y,m-1,Math.min(d,dim)))};
+const diff=(a,b)=>Math.round((s2d(b)-s2d(a))/864e5);
+const TODAY=d2s(new Date());
+const fmt=s=>s2d(s).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+const fmtW=s=>s2d(s).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+const fmtY=s=>s2d(s).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+const valid=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'');
+const inDays=n=>n===0?'Today':n===1?'Tomorrow':n<0?(-n)+' days ago':'in '+n+' days';
+
+const METHODS={
+ none:{l:'No hormonal birth control',k:'nat',d:'Predictions use the cycle history you log.'},
+ copper:{l:'Copper IUD (non-hormonal)',k:'nat',d:'No hormones, so ovulation still happens. Predictions use cycle history.'},
+ combo:{l:'Combined pill',k:'pack',pill:1,d:'Bleeds on hormone-free days are withdrawal bleeds set by the pack, not a natural period. Ovulation is normally suppressed, so fertile-window estimates are hidden.'},
+ patch:{l:'Patch',k:'pack',d:'Bleeds follow the patch-free week. Fertile-window estimates are hidden.'},
+ ring:{l:'Vaginal ring',k:'pack',d:'Bleeds follow the ring-free week. Fertile-window estimates are hidden.'},
+ pop:{l:'Mini-pill (progestin-only)',k:'irr',pill:1,d:'Bleeding can become irregular, lighter or stop, so Ebb tracks the pattern instead of predicting a date. Many mini-pills have a strict daily time window; the leaflet has the details.'},
+ hiud:{l:'Hormonal IUD',k:'irr',dev:1,d:'Bleeding often gets lighter or irregular and can stop. Ebb tracks the pattern and the replacement date.'},
+ implant:{l:'Implant',k:'irr',dev:1,d:'Bleeding is often unpredictable. Ebb tracks the pattern and the replacement date.'},
+ shot:{l:'Injection',k:'irr',shot:1,d:'Bleeding is often irregular or stops. Ebb tracks the pattern and counts down to the next injection.'},
+ other:{l:'Other medication that may affect the cycle',k:'nat',other:1,d:'Ebb keeps normal predictions and marks the start date, so Insights can compare cycles before and after.'}
+};
+const PACKS={'21/7':[21,7,'21 active + 7 hormone-free'],'24/4':[24,4,'24 active + 4 hormone-free'],'28/0':[28,0,'Continuous (no break)'],'84/7':[84,7,'Extended 84 + 7']};
+const SYMS=['Cramps','Headache','Bloating','Acne','Tender breasts','Fatigue','Nausea','Back pain','Cravings'];
+const MOODS=['Calm','Happy','Irritable','Anxious','Low'];
+const FLOWS=['None','Spotting','Light','Medium','Heavy'];
+const HOLS=[['val','02-14',"Valentine's Day","In Japan and Korea she traditionally gives chocolate"],['white','03-14','White Day','Your turn to give back'],['pepero','11-11','Pepero Day','Korean couples swap Pepero'],['xmas','12-24','Christmas Eve',"Japan's big date night"]];
+
+const blank=()=>({v:2,setup:false,mode:'partner',name:'',logs:{},
+ med:{method:'none',since:'',pack:'21/7',packStart:TODAY,shotLast:'',shotWeeks:13,devDate:'',otherName:''},
+ rel:{start:'',style:'both'},hol:{val:true,white:true,pepero:false,xmas:true},dates:[],
+ fav:{flowers:'',sweets:'',food:'',supplies:'',notes:''},
+ notif:{hour:9,period:2,ann:[7,1,0],pill:false,pillTime:'21:00'},
+ cal:{id:'',name:'',periods:true,fertile:false,anns:true,discreet:true,last:''},
+ plus:false,plan:'year',pin:'',sample:false});
+function seed(){const s=blank();s.sample=true;let st=add(TODAY,-11);const lens=[28,30,27,29,28];
+ for(let c=0;c<6;c++){[3,4,3,2,1].forEach((f,i)=>{s.logs[add(st,i)]={flow:f,sym:i===0?['Cramps','Back pain']:i===1?['Cramps','Fatigue']:[],mood:i===1?'Low':''}});
+  s.logs[add(st,-2)]={flow:0,sym:['Bloating','Headache'],mood:'Irritable'};if(c<5)st=add(st,-lens[c])}
+ return s}
+let S=null;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S&&NATIVE){try{S=JSON.parse(NATIVE.load()||'null')}catch(e){}}
+if(!S){try{const o=JSON.parse(localStorage.getItem('ebb-v1'));if(o&&o.logs){S=blank();S.logs=o.logs;S.med=Object.assign(S.med,o.med||{});S.pin=o.pin||''}}catch(e){}}
+if(!S||typeof S.logs!=='object')S=seed();
+{const b=blank();S=Object.assign(b,S);for(const k of['med','rel','hol','fav','notif','cal'])S[k]=Object.assign(b[k],S[k]||{});if(!Array.isArray(S.dates))S.dates=[]}
+let syncT;
+function save(){const j=JSON.stringify(S);try{localStorage.setItem(KEY,j)}catch(e){}if(NATIVE){try{NATIVE.save(j)}catch(e){}clearTimeout(syncT);syncT=setTimeout(pushNative,400)}}
+let tab='today',more='ins',sel=TODAY,view=TODAY.slice(0,7),armClear=false;
+const M=()=>METHODS[S.med.method]||METHODS.none;
+const PT=()=>S.mode==='partner';
+const NAME=()=>PT()?(S.name||'Her'):'You';
+const POSS=()=>PT()?(S.name?S.name+"'s":'Her'):'Your';
+const her=(a,b)=>PT()?a:b;
+const lg=d=>S.logs[d]||{};
+function setLog(d,patch){const o=Object.assign({flow:0,sym:[],mood:''},S.logs[d],patch);if(!o.flow&&!o.sym.length&&!o.mood&&!o.pill)delete S.logs[d];else S.logs[d]=o;save()}
+function setPath(p,v){const ks=p.split('.');let o=S;while(ks.length>1)o=o[ks.shift()];o[ks[0]]=v}
+
+/* ---------- cycle math ---------- */
+function episodes(){const days=Object.keys(S.logs).filter(k=>(S.logs[k].flow||0)>=2).sort();const eps=[];
+ for(const d of days){const l=eps[eps.length-1];if(l&&diff(l.end,d)<=2)l.end=d;else eps.push({start:d,end:d})}return eps}
+function stats(){const eps=episodes();const lens=[];
+ for(let i=1;i<eps.length;i++){const L=diff(eps[i-1].start,eps[i].start);if(L>=15&&L<=60)lens.push({L,start:eps[i-1].start})}
+ const r=lens.slice(-6).map(x=>x.L);const avg=r.length?Math.round(r.reduce((a,b)=>a+b)/r.length):28;
+ const pl=eps.slice(-6).map(e=>diff(e.start,e.end)+1);const avgP=pl.length?Math.round(pl.reduce((a,b)=>a+b)/pl.length):5;
+ const sd=r.length>1?Math.sqrt(r.reduce((a,b)=>a+(b-avg)**2,0)/r.length):0;
+ return{eps,lens,avg,avgP,sd,last:eps[eps.length-1]}}
+function natPred(st,n){if(!st.last)return[];let s=st.last.start;const out=[];let g=0;
+ while(out.length<n&&g++<500){s=add(s,st.avg);const e=add(s,st.avgP-1);if(diff(TODAY,e)>=0)out.push({start:s,end:e,ov:add(s,-14)})}return out}
+function packInfo(){const[a,f]=PACKS[S.med.pack]||PACKS['21/7'];const len=a+f;const ps=valid(S.med.packStart)?S.med.packStart:TODAY;
+ const off=diff(ps,TODAY);const day=((off%len)+len)%len+1;const cur=add(TODAY,-(day-1));const out=[];
+ if(f>0)for(let k=-1;out.length<12&&k<60;k++){const s=add(cur,a+k*len);const e=add(s,f-1);if(diff(TODAY,e)>=0)out.push({start:s,end:e})}
+ return{a,f,len,day,cur,ps,inFree:day>a,bleeds:out}}
+function preds(st,n){const k=M().k;if(k==='nat')return natPred(st,n);if(k==='pack')return packInfo().bleeds.slice(0,n);return[]}
+const showFert=()=>M().k==='nat'&&S.med.method!=='copper';
+function phase(st){const k=M().k;
+ if(k==='irr')return{key:'irr'};
+ if(k==='pack'){const p=packInfo();if(p.f===0)return{key:'steady'};if(p.inFree)return{key:'period'};const to=diff(TODAY,p.bleeds[0].start);return to<=3?{key:'pms',to}:{key:'steady',to}}
+ if(!st.last)return{key:'none'};
+ const cd=diff(st.last.start,TODAY)+1;
+ if((lg(TODAY).flow||0)>=2||(cd<=10&&diff(st.last.end,TODAY)<=0)||cd<=st.avgP)return{key:'period',cd};
+ const to=st.avg+1-cd;if(to<0)return{key:'late',late:-to};if(to<=5)return{key:'pms',to};
+ const ov=st.avg-14;if(cd>=ov-5&&cd<=ov+1)return{key:'mid',cd};return{key:cd<ov-5?'foll':'lut',cd}}
+function missedYesterday(){if(PT()||!M().pill)return false;const y=add(TODAY,-1);if(lg(y).pill)return false;
+ if(M().k==='pack'){const p=packInfo();if(diff(p.ps,y)<0)return false;const off=diff(p.ps,y);return((off%p.len)+p.len)%p.len+1<=p.a}
+ return Object.values(S.logs).some(l=>l.pill)}
+
+/* ---------- anniversaries ---------- */
+function nextMD(md){const y=+TODAY.slice(0,4);let d=ymd(y,md);if(d<TODAY)d=ymd(y+1,md);return d}
+function anns(h=400){const out=[];const st=S.rel.start,end=add(TODAY,h);
+ if(valid(st)){const kr=S.rel.style!=='jp',jp=S.rel.style!=='kr';
+  if(kr)for(let n=100;n<=20000;n+=100){const d=add(st,n-1);if(d>end)break;if(d>=TODAY)out.push({d,l:n+'일',k:n%1000===0?'big':'hundred',sub:n+' days together (Korean count)'})}
+  for(let y=1;y<=80;y++){const d=addM(st,12*y);if(d>end)break;if(d>=TODAY)out.push({d,l:kr&&jp?y+'주년 · '+y+'周年':kr?y+'주년':y+'周年記念日',k:'year',sub:y+(y>1?' years':' year')+' together'})}
+  if(jp)for(let m=1;m<=960;m++){if(m%12===0)continue;const d=addM(st,m);if(d>end)break;if(d>=TODAY)out.push({d,l:m+'ヶ月記念日',k:'month',sub:m+' months together (Japanese count)'})}}
+ for(const[h2,md,l,sub]of HOLS)if(S.hol[h2]){const d=nextMD(md);if(d<=end)out.push({d,l,k:h2,sub})}
+ for(const x of S.dates){if(!valid(x.date))continue;const d=x.yearly?nextMD(x.date.slice(5)):x.date;if(d>=TODAY&&d<=end)out.push({d,l:x.label,k:x.type==='birthday'?'birthday':'custom',sub:x.yearly?'Every year · since '+fmtY(x.date):fmtY(x.date)})}
+ return out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0)}
+function together(){const st=S.rel.start;if(!valid(st)||st>TODAY)return null;const dd=diff(st,TODAY)+1;
+ let m=(+TODAY.slice(0,4)-+st.slice(0,4))*12+(+TODAY.slice(5,7)-+st.slice(5,7));if(addM(st,m)>TODAY)m--;return{dd,m,y:Math.floor(m/12),mm:m%12}}
+
+/* ---------- ideas & care ---------- */
+const F=k=>S.fav[k]?' ('+S.fav[k]+')':'';
+const fill=t=>t.replace(/\{(\w+)\}/g,(_,k)=>F(k));
+const IDEAS={
+ month:['Her favorite sweets{sweets} or a small bouquet{flowers}','A café or dessert date somewhere new','A short handwritten note: one thing you loved this month','A mini replay of your first date'],
+ hundred:['Couple rings or matching items, the classic Korean 100-day gift','A small photo book of your first 100 days','A dinner reservation a step above usual','A letter about your first impressions of her'],
+ big:['A short trip or a night at a ryokan','Something lasting: jewelry, an engraved keepsake, a framed photo','A video of messages from friends'],
+ year:['A weekend away: an onsen town or a city you both want to see','A keepsake: jewelry, an engraved item, a photo album','Dinner where you had an early date','Write down the best moments of the year together'],
+ val:["Be ready to say a real thank-you; in Japan and Korea it's usually her giving chocolate","Keep White Day (Mar 14) in mind for your return gift"],
+ white:["Return the Valentine's gift: sweets{sweets}, flowers{flowers} or a small accessory","The Japanese joke-rule 三倍返し says return about three times the value"],
+ pepero:['Pepero (or Pocky) plus a small gift','Tuck a note inside the box'],
+ xmas:['Book dinner weeks ahead; Christmas Eve restaurants in Japan fill early','An illumination walk (イルミネーション) and Christmas cake','A gift she can wear: scarf, gloves, an accessory'],
+ birthday:['A gift tied to what she loves{flowers}','Plan the whole day so she does not have to','Cake from her favorite shop and a letter'],
+ custom:['A small surprise tied to the occasion','Ask her friends what she would love']
+};
+const CARE={
+ period:{h:()=>her(POSS()+' period is likely on','Your period is on'),
+  p:['Bring warmth: a カイロ, heat pad or hot water bottle (湯たんぽ)','A warm drink or her comfort food{food}','Take one chore off her plate without being asked','Make it an easy night in: delivery and a movie she picks','Ask "What would help right now?" instead of guessing','Skip jokes about mood or hormones'],
+  s:['Heat helps many people with cramps: カイロ, heat pad or hot water bottle','Warm drinks, rest and easy plans','Hand off a chore today']},
+ pms:{h:x=>her(POSS()+' period is likely in '+x.to+(x.to===1?' day':' days'),'Your period is likely in '+x.to+(x.to===1?' day':' days')),
+  p:['Restock her supplies{supplies} before it starts','Pick up her favorite sweets{sweets}','Keep plans flexible in case she is tired or sore','Line up a cozy plan for the first day or two'],
+  s:['Restock supplies before it starts','Keep plans flexible']},
+ foll:{h:()=>her('Post-period days','Post-period days'),
+  p:['Many people have more energy after their period: good window for the active date (hike, theme park, day trip)','Book the bigger outing now','Flowers for no reason{flowers}'],
+  s:['Many people feel more energetic now, a good time for bigger plans']},
+ mid:{h:()=>'Mid-cycle',p:['Plan something social: dinner out, friends, an event','Fertile-window dates are estimates only, never birth control'],s:['Fertile-window dates are estimates only, never birth control']},
+ lut:{h:()=>'Second half of the cycle',p:['Energy can dip toward the end of the cycle; lean into cozy plans','Check her supplies are stocked{supplies}','Small kindness: a note or her favorite drink'],s:['Energy can dip toward the end of the cycle; plan some rest']},
+ late:{h:x=>her(POSS()+' period is '+x.late+(x.late===1?' day':' days')+' later than predicted','Your period is '+x.late+(x.late===1?' day':' days')+' later than predicted'),
+  p:['Cycles shift with stress, travel, sleep and illness','If she is worried, stay calm and supportive; a test or a doctor can give answers'],s:['Cycles shift with stress, travel, sleep and illness','If you are worried, a test or a doctor can give answers']},
+ steady:{h:()=>her('Steady days on her method','Steady days on your method'),p:['On active pills her hormones stay steady, so there is no natural high or low to plan around','Just ask how she is feeling'],s:['On active pills hormones stay steady']},
+ irr:{h:()=>her('Her bleeding can be unpredictable on this method','Bleeding can be unpredictable on your method'),p:['Keep a few of her usual supplies at your place{supplies}','Check in instead of predicting'],s:['Keep supplies handy']},
+ none:{h:()=>her('Log her last period','Log your last period'),p:['Timing, tips and reminders start once a period is logged'],s:['Timing, tips and reminders start once a period is logged']}
+};
+
+/* ---------- schedule, widget, calendar ---------- */
+function buildSchedule(){const out=[],st=stats(),now=Date.now(),H=+S.notif.hour||9,k=M().k,pd=+S.notif.period;
+ const at=(d,h=H,mi=0)=>{const x=s2d(d);x.setHours(h,mi,0,0);return x.getTime()};
+ if(k!=='irr'&&pd>=0)for(const p of preds(st,5)){
+  if(pd>0)out.push({at:at(add(p.start,-pd)),t:POSS()+(k==='pack'?' bleed':' period')+' in ~'+pd+(pd>1?' days':' day'),b:her('Stock up and keep plans easy.'+(S.fav.supplies?' Her usual: '+S.fav.supplies+'.':''),'Time to restock supplies.')});
+  out.push({at:at(p.start),t:her(POSS()+' period may start today','Your period may start today'),b:her('Warmth, snacks, patience. Ask what she needs.','Go easy on yourself today.')})}
+ for(const a of anns(130))for(const d of S.notif.ann){const idea=fill((IDEAS[a.k]||IDEAS.custom)[0]);
+  out.push({at:at(add(a.d,-d)),t:d===0?'Today: '+a.l:a.l+' in '+d+(d>1?' days':' day'),b:d===0?a.sub:'Idea: '+idea+(d>=7&&['year','big','xmas','hundred','birthday'].includes(a.k)?'. Book now if you are going out.':'')})}
+ if(!PT()&&M().pill&&S.notif.pill){const[hh,mm]=(S.notif.pillTime||'21:00').split(':').map(Number);for(let i=0;i<30;i++)out.push({at:at(add(TODAY,i),hh,mm),t:'Pill time',b:'Tap to open Ebb and check it off.'})}
+ const m=S.med;let due='';if(M().shot&&valid(m.shotLast))due=add(m.shotLast,(+m.shotWeeks||13)*7);if(M().dev&&valid(m.devDate))due=m.devDate;
+ if(due){out.push({at:at(add(due,-7)),t:her(POSS()+' injection/replacement in 7 days','Injection/replacement in 7 days'),b:'Due '+fmtW(due)+'.'});out.push({at:at(due),t:her(POSS()+' injection/replacement is due today','Injection/replacement due today'),b:'Due '+fmtW(due)+'.'})}
+ return out.filter(x=>x.at>now).sort((a,b)=>a.at-b.at).slice(0,180).map((x,i)=>Object.assign(x,{id:i+1}))}
+function widgetData(){const st=stats();return{name:PT()?(S.name||''):'',start:valid(S.rel.start)?S.rel.start:'',who:POSS()+(M().k==='pack'?' bleed':' period'),
+ periods:preds(st,3).map(p=>({s:p.start,e:p.end})),anns:anns(400).slice(0,6).map(a=>({l:a.l,d:a.d})),note:M().k==='irr'?her('Cycle: unpredictable on her method','Cycle: unpredictable on your method'):''}}
+function calEvents(){const out=[],st=stats(),ini=(S.name||'P').slice(0,1);
+ if(S.cal.anns)for(const a of anns(365))out.push({t:a.l,s:a.d,e:a.d,d:a.sub+' · from Ebb'});
+ if(S.cal.periods&&M().k!=='irr')for(const p of preds(st,6))out.push({t:S.cal.discreet?(PT()?ini+' · cycle (est.)':'Cycle (est.)'):POSS()+' period (predicted)',s:p.start,e:p.end,d:'Predicted by Ebb'});
+ if(S.cal.fertile&&showFert())for(const p of natPred(st,6))out.push({t:S.cal.discreet?'Cycle note (est.)':'Fertile window (estimate)',s:add(p.ov,-5),e:add(p.ov,1),d:'Estimate only, not birth control'});
+ return out}
+const gcal=e=>'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(e.t)+'&dates='+e.s.replace(/-/g,'')+'/'+add(e.e,1).replace(/-/g,'')+'&details='+encodeURIComponent(e.d||'');
+function ics(){const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ebb//EN'];calEvents().forEach((e,i)=>L.push('BEGIN:VEVENT','UID:ebb-'+i+'-'+e.s+'@ebb','DTSTAMP:'+TODAY.replace(/-/g,'')+'T000000Z','DTSTART;VALUE=DATE:'+e.s.replace(/-/g,''),'DTEND;VALUE=DATE:'+add(e.e,1).replace(/-/g,''),'SUMMARY:'+e.t.replace(/([,;\\])/g,'\\$1'),'END:VEVENT'));L.push('END:VCALENDAR');return L.join('\r\n')}
+function pushNative(){if(!NATIVE)return;try{NATIVE.schedule(JSON.stringify(buildSchedule()))}catch(e){}try{NATIVE.setWidget(JSON.stringify(widgetData()))}catch(e){}}
+function calSync(quiet){if(!NATIVE||!S.cal.id)return;let r='';try{r=NATIVE.syncCalendar(String(S.cal.id),JSON.stringify(calEvents()))}catch(e){r='ERR:'+e}
+ if(String(r).startsWith('OK:')){S.cal.last=TODAY+'|'+r.slice(3);save();if(!quiet)toast('Synced '+r.slice(3)+' events')}else if(!quiet)toast('Sync failed: '+String(r).replace('ERR:',''))}
+
+/* ---------- views: Today ---------- */
+function setupCard(){return `<div class="card"><h2>Set up Ebb</h2><p class="muted">Whose cycle are you tracking?</p>
+ <div class="row"><button class="chip" data-a="mode" data-v="partner" aria-pressed="${PT()}">My girlfriend's</button><button class="chip" data-a="mode" data-v="self" aria-pressed="${!PT()}">My own</button></div>
+ ${PT()?`<label for="s-name">Her name</label><input id="s-name" data-s="name" maxlength="30" value="${esc(S.name)}" placeholder="Name or nickname">`:''}
+ <label for="s-rel">Day you started dating (付き合った日 / 사귄 날)</label><input type="date" id="s-rel" data-s="rel.start" value="${esc(S.rel.start)}" max="${TODAY}">
+ <label>Count anniversaries the</label>${styleChips()}
+ ${PT()?'<p class="muted" style="margin-top:12px">Partner mode works best when she shares her dates with you, or you set it up together.</p>':''}
+ <button class="btn" data-a="setupdone" style="margin-top:10px">Done</button></div>`}
+function styleChips(){return `<div class="row">${[['kr','한국식 · days'],['jp','日本式 · months'],['both','Both']].map(([v,l])=>`<button class="chip" data-a="style" data-v="${v}" aria-pressed="${S.rel.style===v}">${l}</button>`).join('')}</div>`}
+function dial(st){const cd=st.last?diff(st.last.start,TODAY)+1:1;const N=Math.min(Math.max(st.avg,cd),60);const ov=st.avg-14;let dots='';
+ for(let i=1;i<=N;i++){const a=(-90+360*(i-1)/N)*Math.PI/180,x=150+118*Math.cos(a),y=150+118*Math.sin(a);
+  let c='var(--line2)';if(i<=st.avgP)c='var(--berry)';else if(showFert()&&i>=ov-5&&i<=ov+1)c='var(--teal)';
+  dots+=i===cd?`<circle class="now" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="${c}" stroke="var(--ink)" stroke-width="3"/>`:`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" fill="${c}"/>`}
+ let line='No period logged yet';
+ if(st.last){const late=cd-st.avg-1;const ph=phase(st);
+  if(ph.key==='period')line='Period, day '+cd;else if(late>0)line=late+(late===1?' day':' days')+' late';
+  else{const to=st.avg+1-cd;line=to===0?'Period likely today':'Period in '+to+(to===1?' day':' days')}}
+ const fert=st.last&&showFert()&&cd>=ov-5&&cd<=ov+1;
+ return `<svg class="dial" viewBox="0 0 300 300" role="img" aria-label="Cycle day ${cd}. ${esc(line)}">
+ <circle cx="150" cy="150" r="96" fill="var(--bg)"/>${dots}
+ <text x="150" y="130" text-anchor="middle" font-size="15" fill="var(--muted)" font-family="DM Sans,sans-serif">${esc(PT()?(S.name||'Her')+"'s cycle":'Cycle day')}</text>
+ <text x="150" y="178" text-anchor="middle" font-size="54" fill="var(--ink)" font-family="Fraunces,serif" font-weight="600">${st.last?cd:'–'}</text>
+ <text x="150" y="206" text-anchor="middle" font-size="15" fill="${fert?'var(--teal)':'var(--berry)'}" font-weight="700" font-family="DM Sans,sans-serif">${fert?'Fertile window (est.)':esc(line)}</text></svg>`}
+function blister(){const p=packInfo(),m=S.med.method;const from=p.len<=28?1:Math.max(1,Math.min(p.day-13,p.len-27)),to=Math.min(p.len,from+27);let h='';
+ for(let i=from;i<=to;i++){const d=add(p.cur,i-1);h+=`<span class="${['pill',i>p.a?'free':'',i===p.day?'now':'',m==='combo'&&lg(d).pill?'taken':''].join(' ')}" title="${fmt(d)}">${i}</span>`}
+ const unit=m==='combo'?'Pill':'Day';let line,sub='';
+ if(p.f===0)line=unit+' '+p.day+' · continuous',sub='No scheduled bleed. Log any spotting.';
+ else if(p.inFree)line='Hormone-free day '+(p.day-p.a)+' of '+p.f,sub='Withdrawal bleed expected around now.';
+ else{line=unit+' '+p.day+' of '+p.a;sub='Withdrawal bleed expected '+fmt(p.bleeds[0].start)+'.'}
+ if(m==='patch'&&!p.inFree&&(p.day-1)%7===0)sub='Patch change day. '+sub;
+ if(m==='ring'&&p.day===1)sub='New ring day. '+sub;if(m==='ring'&&p.day===p.a+1)sub='Ring-free week starts today.';
+ return `<div class="blister" role="img" aria-label="Pack view">${h}</div><p class="status">${esc(PT()?(S.name||'Her')+': ':'')}${line}</p><p class="muted">${sub}</p>`}
+function stripView(){let h='',b=0;for(let i=89;i>=0;i--){const d=add(TODAY,-i);const f=lg(d).flow||0;if(f)b++;h+=`<span class="sq f${Math.min(f,4)}" title="${fmt(d)}"></span>`}
+ let cd='';const m=S.med;
+ if(M().shot&&valid(m.shotLast)){const nx=add(m.shotLast,(+m.shotWeeks||13)*7),dd=diff(TODAY,nx);cd=`<p class="status">Next injection ${dd>=0?'in '+dd+' days':'overdue by '+(-dd)+' days'} · ${fmt(nx)}</p>`}
+ if(M().dev&&valid(m.devDate)){const dd=diff(TODAY,m.devDate);cd=`<p class="status">Replacement due ${fmtW(m.devDate)}${dd<120?' ('+inDays(dd)+')':''}</p>`}
+ if((M().shot&&!valid(m.shotLast))||(M().dev&&!valid(m.devDate)))cd='<p class="muted">Add the date on the Meds tab to get a countdown and reminder.</p>';
+ return `<p class="muted" style="margin-top:8px">Last 90 days</p><div class="strip" role="img" aria-label="Bleeding on ${b} of the last 90 days">${h}</div><p class="status">Bleeding or spotting on ${b} of the last 90 days</p>${cd}`}
+function logPanel(d){const l=lg(d),fut=d>TODAY;
+ return `<div class="card"><h3>${d===TODAY?her('Log for her today','Today'):fmtW(d)}</h3>${fut?'<p class="muted">You can log days up to today.</p>':`
+ <label>${her('Her flow','Flow')}</label><div class="row">${FLOWS.map((f,i)=>`<button class="chip" data-a="flow" data-v="${i}" aria-pressed="${(l.flow||0)===i}">${f}</button>`).join('')}</div>
+ <label>Symptoms</label><div class="row">${SYMS.map(s=>`<button class="chip t" data-a="sym" data-v="${s}" aria-pressed="${(l.sym||[]).includes(s)}">${s}</button>`).join('')}</div>
+ <label>Mood</label><div class="row">${MOODS.map(s=>`<button class="chip t" data-a="mood" data-v="${s}" aria-pressed="${l.mood===s}">${s}</button>`).join('')}</div>
+ ${!PT()&&M().pill?`<label>Pill</label><div class="row"><button class="chip t" data-a="pill" aria-pressed="${!!l.pill}">${l.pill?'Pill taken':'Mark pill taken'}</button></div>`:''}`}</div>`}
+function careCard(st){const ph=phase(st),c=CARE[ph.key];const tips=(PT()?c.p:c.s).map(t=>`<li>${esc(fill(t))}</li>`).join('');
+ return `<div class="card"><h3>${esc(c.h(ph))}</h3><p class="muted">${her('How to show up','Take care of yourself')}</p><ul class="tips">${tips}</ul></div>`}
+function nextAnnCard(){const a=anns(400)[0];if(!a)return `<div class="card"><h3>Anniversaries</h3><p class="muted">Add the day you started dating on the Us tab to count 100일 and ヶ月記念日.</p><button class="btn ghost" data-a="tab" data-t="us">Set up</button></div>`;
+ const n=diff(TODAY,a.d),t=together();
+ return `<div class="card"><h3>${esc(a.l)} · ${inDays(n)}</h3><p class="muted">${fmtW(a.d)}${t?' · today is D+'+t.dd:''}</p><p>${esc(fill((IDEAS[a.k]||IDEAS.custom)[0]))}</p><button class="btn ghost" data-a="tab" data-t="us">All dates & ideas</button></div>`}
+function today(){const st=stats(),k=M().k;const hero=k==='pack'?blister():k==='irr'?stripView():dial(st);
+ const pr=preds(st,3),l=lg(TODAY);
+ const quick=`<div class="row" style="justify-content:center;margin-top:10px">${!PT()&&M().pill?`<button class="btn ${l.pill?'ghost':''}" data-a="pilltoday">${l.pill?'Pill taken today':'Take today’s pill'}</button>`:''}
+  <button class="btn ${!PT()&&M().pill?'ghost':''}" data-a="quick">${(l.flow||0)>=2?'Bleed logged today':her('Her period started today',k==='nat'?'Period started today':'Bleeding started today')}</button></div>`;
+ const miss=missedYesterday()?`<div class="note"><b>No pill logged yesterday.</b> If you missed it, check the leaflet or ask a pharmacist what to do, since protection can be reduced. <button class="chip" data-a="pillyest" style="margin-top:8px">I took it, log it</button></div>`:'';
+ const up=k==='irr'?`<p class="muted">${esc(M().d)}</p>`:pr.length?`<ul class="list">${pr.map(p=>`<li><span>${k==='pack'?'Withdrawal bleed':her(esc(NAME())+"'s period",'Period')}</span><b>${fmt(p.start)} – ${fmt(p.end)}</b></li>`).join('')}${showFert()&&pr[0]?`<li><span>Fertile window (est.)</span><b>${fmt(add(pr[0].ov,-5))} – ${fmt(add(pr[0].ov,1))}</b></li>`:''}</ul>${k==='nat'?'<p class="muted" style="margin-top:8px">Estimates only. Not a method of birth control.</p>':''}`:'<p class="muted">Log a period to see predictions.</p>';
+ return `${S.setup?'':setupCard()}<section class="hero"><div class="cols" style="align-items:center"><div>${hero}</div><div><p class="muted">${esc(M().l)}${S.sample?' · sample data, clear it in More › Settings':''}</p>${quick}${miss}</div></div></section>
+ <div class="cols">${careCard(st)}${nextAnnCard()}<div class="card"><h3>Coming up</h3>${up}</div>${logPanel(sel=TODAY)}</div>`}
+
+/* ---------- Calendar ---------- */
+function cal(){const st=stats(),k=M().k,pr=preds(st,12);const annSet=new Set(anns(500).map(a=>a.d));const[y,m]=view.split('-').map(Number);const first=new Date(y,m-1,1),days=new Date(y,m,0).getDate();
+ let cells='';for(let i=0;i<first.getDay();i++)cells+='<span class="day blank"></span>';
+ for(let i=1;i<=days;i++){const d=view+'-'+pad(i),l=lg(d),f=l.flow||0,c=['day'];
+  if(f>=2)c.push('bleed');else if(f===1)c.push('spot');
+  if(f<2&&d>=TODAY&&pr.some(p=>d>=p.start&&d<=p.end))c.push('pred');
+  if(showFert()&&f<2&&pr.some(p=>d>=add(p.ov,-5)&&d<=add(p.ov,1)))c.push('fert');
+  if(l.pill)c.push('pilled');if(annSet.has(d))c.push('ann');if(d===TODAY)c.push('today');if(d===sel)c.push('sel');if(d>TODAY)c.push('fut');
+  cells+=`<button class="${c.join(' ')}" data-a="day" data-d="${d}" aria-label="${fmtW(d)}">${annSet.has(d)?'<span class="star" aria-hidden="true">✦</span>':''}${i}</button>`}
+ const dayAnns=anns(500).filter(a=>a.d===sel);
+ return `<div class="cols"><div class="card"><div class="row" style="justify-content:space-between"><button class="chip" data-a="mon" data-v="-1" aria-label="Previous month">Prev</button><h2 style="margin:0">${first.toLocaleDateString(undefined,{month:'long',year:'numeric'})}</h2><button class="chip" data-a="mon" data-v="1" aria-label="Next month">Next</button></div>
+ <div class="cal" style="margin-top:12px">${['S','M','T','W','T','F','S'].map(w=>`<span class="wd">${w}</span>`).join('')}${cells}</div>
+ <div class="legend"><span><i style="background:var(--berry)"></i>Bleeding</span><span><i style="box-shadow:inset 0 0 0 2px var(--berry)"></i>Predicted</span>${showFert()?'<span><i style="background:var(--tsoft)"></i>Fertile (est.)</span>':''}<span>✦ Anniversary</span></div>
+ ${dayAnns.length?`<div class="note t">${dayAnns.map(a=>'<b>'+esc(a.l)+'</b> · '+esc(a.sub)).join('<br>')}</div>`:''}</div>${logPanel(sel)}</div>`}
+
+/* ---------- Us ---------- */
+function us(){const t=together(),list=anns(400).slice(0,12);
+ const hero=t?`<section class="hero"><p class="muted">${esc(PT()?'You & '+(S.name||'her'):'Together')} · since ${fmtY(S.rel.start)}</p><div class="dplus">D+${t.dd}</div>
+  <p class="status">${t.dd}일째 · ${t.y?t.y+'年':''}${t.mm}ヶ月${t.y?'':''}</p>${styleChips()}</section>`
+  :`<section class="hero"><h2 style="margin-top:12px">記念日 · 기념일</h2><p class="muted">Korean couples count days (100일, 200일). Japanese couples celebrate every month (1ヶ月記念日). Ebb does both.</p>
+  <label for="u-rel">Day you started dating</label><input type="date" id="u-rel" data-s="rel.start" value="${esc(S.rel.start)}" max="${TODAY}" style="max-width:260px">${styleChips()}</section>`;
+ const evs=list.length?list.map(a=>{const n=diff(TODAY,a.d);const ideas=(IDEAS[a.k]||IDEAS.custom).map(x=>`<li>${esc(fill(x))}</li>`).join('');
+  return `<details class="ev"><summary><span class="dd"><b>${fmt(a.d)}</b><small>${inDays(n)}</small></span><span><b>${esc(a.l)}</b><small>${esc(a.sub)}</small></span></summary>
+  <div class="body"><p class="muted" style="margin:0">Ideas</p><ul class="tips">${ideas}</ul>${NATIVE?'':`<a class="chip" href="${esc(gcal({t:a.l,s:a.d,e:a.d,d:a.sub}))}" target="_blank" rel="noopener" style="margin-top:8px">Add to Google Calendar</a>`}</div></details>`}).join(''):'<p class="muted">Add your start date above, or a birthday below.</p>';
+ const fav=[['flowers','Flowers she likes'],['sweets','Sweets & snacks'],['food','Comfort food'],['supplies','Period supplies she uses'],['notes','Notes: sizes, wish list, allergies']];
+ return `${hero}<div class="cols"><div class="card"><h2>Coming up</h2>${evs}</div>
+ <div><div class="card"><h3>Couple holidays</h3><div class="row">${HOLS.map(([k,md,l])=>`<button class="chip t" data-a="hol" data-v="${k}" aria-pressed="${!!S.hol[k]}">${l}</button>`).join('')}</div></div>
+ <div class="card"><h3>Important dates</h3>${S.dates.length?`<ul class="list">${S.dates.map(x=>`<li><span>${esc(x.label)}<br><small>${fmtY(x.date)}${x.yearly?' · yearly':''}</small></span><button class="chip" data-a="deldate" data-v="${esc(x.id)}" aria-label="Delete ${esc(x.label)}">Delete</button></li>`).join('')}</ul>`:''}
+  <label for="nd-l">Name</label><input id="nd-l" maxlength="40" placeholder="${esc(PT()?(S.name||'Her')+"'s birthday":'Birthday')}">
+  <div class="cols" style="gap:10px"><div><label for="nd-d">Date</label><input type="date" id="nd-d"></div><div><label for="nd-t">Type</label><select id="nd-t"><option value="birthday">Birthday (yearly)</option><option value="yearly">Other, yearly</option><option value="once">One time</option></select></div></div>
+  <button class="btn" data-a="adddate" style="margin-top:12px">Add date</button></div>
+ <div class="card"><h3>${her('Her favorites','Favorites')}</h3><p class="muted">Ebb uses these in tips, gift ideas and reminders.</p>${fav.map(([k,l])=>`<label for="fv-${k}">${l}</label><input id="fv-${k}" data-s="fav.${k}" maxlength="80" value="${esc(S.fav[k])}">`).join('')}</div></div></div>`}
+
+/* ---------- Meds ---------- */
+function meds(){const m=S.med,X=M();const opt=Object.entries(METHODS).map(([k,v])=>`<option value="${k}" ${k===m.method?'selected':''}>${v.l}</option>`).join('');let extra='';
+ if(X.k==='pack'){const what=m.method==='combo'?'pill pack':m.method==='patch'?'patch cycle':'ring cycle';
+  extra=`<label for="f-pack">Schedule</label><select id="f-pack" data-f="pack">${Object.entries(PACKS).map(([k,v])=>`<option value="${k}" ${k===m.pack?'selected':''}>${v[2]}</option>`).join('')}</select>
+  <label for="f-ps">Day 1 of the current ${what}</label><input type="date" id="f-ps" data-f="packStart" value="${esc(m.packStart)}" max="${TODAY}">`}
+ if(X.shot)extra=`<label for="f-sl">Last injection</label><input type="date" id="f-sl" data-f="shotLast" value="${esc(m.shotLast)}" max="${TODAY}"><label for="f-sw">Weeks between injections</label><input type="number" id="f-sw" data-f="shotWeeks" min="1" max="52" value="${esc(m.shotWeeks)}"><small>Match the prescription.</small>`;
+ if(X.dev)extra=`<label for="f-dv">Replacement or check-up due</label><input type="date" id="f-dv" data-f="devDate" value="${esc(m.devDate)}">`;
+ if(X.other)extra=`<label for="f-on">Medication name (optional)</label><input id="f-on" data-f="otherName" maxlength="60" value="${esc(m.otherName)}" placeholder="Stays on this device">`;
+ const since=m.method==='none'?'':`<label for="f-si">Started on</label><input type="date" id="f-si" data-f="since" value="${esc(m.since)}" max="${TODAY}"><small>Lets Insights compare cycles before and after.</small>`;
+ return `<div class="cols"><div class="card"><h2>${her('Her meds & birth control','Meds & birth control')}</h2><p class="muted">Hormonal methods change what a "period" means, so Ebb switches how it predicts.</p>
+ <label for="f-m">${her('What is '+esc(S.name||'she')+' on?','What are you on?')}</label><select id="f-m" data-f="method">${opt}</select>
+ <div class="note t">${esc(X.d)}</div>${extra}${since}</div>
+ <div class="card"><h3>How Ebb adapts</h3><ul class="list"><li><span>Natural cycle, copper IUD, other meds</span><b>Dial</b></li><li><span>Combined pill, patch, ring</span><b>Pack view</b></li><li><span>Mini-pill, hormonal IUD, implant, injection</span><b>90-day pattern</b></li></ul>
+ <p class="muted" style="margin-top:10px">Ebb gives no medical advice; a prescriber or pharmacist does.</p></div></div>`}
+
+/* ---------- More: insights, reminders, calendar, settings ---------- */
+const unlocked=()=>!PAYWALL||S.plus;
+function locked(inner,title){return unlocked()?`<div class="card">${inner}</div>`:`<div class="card"><h3>${title}</h3><p class="muted">Ebb Plus</p></div>`}
+function symPatterns(st){const cnt={};for(const[d,l]of Object.entries(S.logs)){for(const s of l.sym||[]){let ph='other days';
+  if(st.eps.some(e=>d>=e.start&&d<=e.end))ph='during the period';else if(st.eps.some(e=>{const x=diff(d,e.start);return x>=1&&x<=5}))ph='in the days before';
+  cnt[s]=cnt[s]||{n:0};cnt[s].n++;cnt[s][ph]=(cnt[s][ph]||0)+1}}
+ return Object.entries(cnt).sort((a,b)=>b[1].n-a[1].n).slice(0,5).map(([s,o])=>({s,n:o.n,ph:['during the period','in the days before','other days'].sort((a,b)=>(o[b]||0)-(o[a]||0))[0]}))}
+function report(st){const m=S.med,ls=st.lens.map(x=>x.L),sp=symPatterns(st);
+ return['Cycle summary from Ebb, '+fmtW(TODAY),'Method: '+M().l+(m.method==='other'&&m.otherName?' ('+m.otherName+')':'')+(valid(m.since)?', since '+fmt(m.since):''),
+ 'Average cycle: '+st.avg+' days'+(ls.length?' (range '+Math.min(...ls)+'–'+Math.max(...ls)+', '+ls.length+' cycles)':''),'Average bleed: '+st.avgP+' days',
+ st.last?'Last bleed: '+fmt(st.last.start)+' – '+fmt(st.last.end):'No bleeds logged','Cycle lengths: '+(ls.join(', ')||'none yet'),
+ 'Common symptoms: '+(sp.map(x=>x.s+' ('+x.n+'×, mostly '+x.ph+')').join('; ')||'none logged')].join('\n')}
+function insights(){const st=stats(),k=M().k,ls=st.lens.slice(-8),mx=Math.max(35,...ls.map(x=>x.L)),sp=symPatterns(st);
+ const nums=`<div class="card"><h2>${her(esc(NAME())+"'s numbers",'Your numbers')}</h2><div class="stats"><div><div class="big">${st.avg}</div><small>avg cycle, days</small></div><div><div class="big">${st.avgP}</div><small>avg bleed, days</small></div><div><div class="big">${st.lens.length}</div><small>complete cycles</small></div></div>
+ ${k!=='nat'?`<p class="muted" style="margin-top:12px">On ${esc(M().l.toLowerCase())}, bleeds are set by the method, so these numbers describe withdrawal or breakthrough bleeding.</p>`:''}</div>`;
+ const bars=`<h3>Cycle length history</h3>${ls.length?ls.map(x=>`<div class="bar"><span>${fmt(x.start)}</span><span style="width:${(x.L/mx*100).toFixed(0)}%"></span><span>${x.L}d</span></div>`).join(''):'<p class="muted">Log two periods to see this.</p>'}<p class="muted">${st.lens.length>1?'Cycles vary by about ±'+st.sd.toFixed(1)+' days. If the pattern changes a lot or is worrying, a doctor can help.':''}</p>`;
+ const pat=`<h3>Symptom patterns</h3>${sp.length?`<ul class="list">${sp.map(x=>`<li><span>${esc(x.s)}, mostly ${x.ph}</span><b>${x.n}×</b></li>`).join('')}</ul>`:'<p class="muted">Log symptoms to find patterns.</p>'}`;
+ let cmp='<h3>Before vs after meds</h3>';const since=S.med.since;
+ if(S.med.method==='none'||!valid(since))cmp+='<p class="muted">Pick a method and start date on the Meds tab to compare.</p>';
+ else{const b=st.lens.filter(x=>x.start<since).map(x=>x.L),a=st.lens.filter(x=>x.start>=since).map(x=>x.L),av=v=>v.length?(v.reduce((p,c)=>p+c)/v.length).toFixed(1)+' days':'not enough data';cmp+=`<ul class="list"><li><span>Before ${fmt(since)}</span><b>${av(b)}</b></li><li><span>Since then</span><b>${av(a)}</b></li></ul>`}
+ const fc=preds(st,12);const fore=`<h3>12-month forecast</h3>${fc.length?`<ul class="list">${fc.map((p,i)=>`<li><span>${k==='pack'?'Bleed':'Period'} ${i+1}</span><b>${fmt(p.start)} – ${fmt(p.end)}</b></li>`).join('')}</ul>`:'<p class="muted">No predictable bleed dates on this method.</p>'}`;
+ const rep=`<h3>Doctor report</h3><p class="muted">A plain summary to share at an appointment.</p><textarea id="rep" readonly aria-label="Report">${esc(report(st))}</textarea><div class="row" style="margin-top:8px"><button class="btn" data-a="copyrep">Copy</button>${NATIVE?'<button class="btn ghost" data-a="sharerep">Share</button>':''}</div>`;
+ return `<div class="cols">${nums}${locked(bars,'Cycle history')}${locked(pat,'Symptom patterns')}${locked(cmp,'Before vs after meds')}${locked(fore,'12-month forecast')}${locked(rep,'Doctor report')}</div>`}
+function reminders(){const sch=buildSchedule();let perm=false;if(NATIVE){try{perm=NATIVE.hasPerm('notif')}catch(e){}}
+ const hours=Array.from({length:18},(_,i)=>i+6).map(h=>`<option value="${h}" ${+S.notif.hour===h?'selected':''}>${pad(h)}:00</option>`).join('');
+ const pds=[[-1,'Off'],[0,'Day of only'],[1,'1 day before'],[2,'2 days before'],[3,'3 days before'],[5,'5 days before']].map(([v,l])=>`<option value="${v}" ${+S.notif.period===v?'selected':''}>${l}</option>`).join('');
+ return `<div class="cols"><div class="card"><h2>Reminders</h2>
+ ${NATIVE?(perm?'<p class="muted">Notifications are on.</p>':'<div class="note">Notifications are off for Ebb. <button class="btn" data-a="perm" data-v="notif" style="margin-top:8px">Allow notifications</button></div>'):'<div class="note t">Phone notifications and the home-screen widget run in the Android app. This page shows what it would send.</div>'}
+ <label for="n-h">Reminder time</label><select id="n-h" data-s="notif.hour" data-num="1">${hours}</select>
+ <label for="n-p">${her(esc(NAME())+"'s period heads-up",'Period heads-up')}</label><select id="n-p" data-s="notif.period" data-num="1">${pds}</select>
+ <label>Anniversary reminders</label><div class="row">${[[14,'2 weeks'],[7,'1 week'],[3,'3 days'],[1,'1 day'],[0,'Day of']].map(([v,l])=>`<button class="chip t" data-a="annday" data-v="${v}" aria-pressed="${S.notif.ann.includes(v)}">${l}</button>`).join('')}</div>
+ ${!PT()&&M().pill?`<label>Daily pill reminder</label><div class="row"><button class="chip t" data-a="pillrem" aria-pressed="${!!S.notif.pill}">${S.notif.pill?'On':'Off'}</button><input type="time" data-s="notif.pillTime" value="${esc(S.notif.pillTime)}" style="max-width:150px" aria-label="Pill time"></div>`:''}
+ </div><div class="card"><h3>Next reminders</h3>${sch.length?`<ul class="list">${sch.slice(0,8).map(x=>{const d=new Date(x.at);return`<li><span>${esc(x.t)}<br><small>${esc(x.b)}</small></span><b>${fmt(d2s(d))}</b></li>`}).join('')}</ul><p class="muted" style="margin-top:8px">${sch.length} scheduled. Opening Ebb now and then keeps the next few months queued.</p>`:'<p class="muted">Nothing scheduled yet.</p>'}</div></div>`}
+function calSection(){const ev=calEvents();const opts=[['anns','Anniversaries'],['periods','Predicted periods'],['fertile','Fertile window (est.)'],['discreet','Discreet titles']];
+ const toggles=`<div class="row">${opts.map(([k,l])=>`<button class="chip t" data-a="calopt" data-v="${k}" aria-pressed="${!!S.cal[k]}">${l}</button>`).join('')}</div><p class="muted" style="margin-top:8px">Discreet titles show period events as "${esc((S.name||'P').slice(0,1))} · cycle (est.)", handy if your calendar is shared.</p>`;
+ let body='';
+ if(NATIVE){let perm=false,cals=[];try{perm=NATIVE.hasPerm('cal')}catch(e){}
+  if(!perm)body='<p>Ebb writes events straight into a calendar on this phone. Pick your Google account calendar and they sync to Google Calendar everywhere.</p><button class="btn" data-a="perm" data-v="cal">Allow calendar access</button>';
+  else{try{cals=JSON.parse(NATIVE.calendars()||'[]')}catch(e){}
+   const last=S.cal.last?S.cal.last.split('|'):null;
+   body=`<label for="c-id">Calendar</label><select id="c-id" data-s="cal.id"><option value="">Choose…</option>${cals.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(S.cal.id)?'selected':''}>${esc(c.name)} · ${esc(c.account)}</option>`).join('')}</select>
+   <div style="margin-top:12px">${toggles}</div><div class="row" style="margin-top:12px"><button class="btn" data-a="calsync" ${S.cal.id?'':'disabled'}>Sync now</button><button class="btn ghost" data-a="calclear">Remove Ebb events</button></div>
+   <p class="muted" style="margin-top:8px">${last?'Last sync '+fmt(last[0])+', '+esc(last[1])+' events. ':''}Ebb re-syncs once a day when you open it, replacing its own events only.</p>`}}
+ else body=`${toggles}<ul class="list" style="margin-top:8px">${ev.slice(0,8).map(e=>`<li><span>${esc(e.t)}<br><small>${fmt(e.s)}${e.e!==e.s?' – '+fmt(e.e):''}</small></span><a class="chip" href="${esc(gcal(e))}" target="_blank" rel="noopener">Add</a></li>`).join('')}</ul>
+  <button class="btn ghost" data-a="copyics" style="margin-top:10px">Copy all as .ics</button><p class="muted" style="margin-top:8px">Import an .ics at calendar.google.com › Settings › Import & export.</p>`;
+ return `<div class="cols"><div class="card"><h2>Google Calendar</h2>${body}</div><div class="card"><h3>What gets added</h3><p class="muted">${ev.length} events over the next year: ${S.cal.anns?'anniversaries, ':''}${S.cal.periods?'predicted periods, ':''}${S.cal.fertile?'fertile windows, ':''}all as all-day events.</p></div></div>`}
+function settings(){return `<div class="cols"><div class="card"><h2>Settings</h2>
+ <label>Mode</label><div class="row"><button class="chip" data-a="mode" data-v="partner" aria-pressed="${PT()}">Tracking my girlfriend</button><button class="chip" data-a="mode" data-v="self" aria-pressed="${!PT()}">Tracking myself</button></div>
+ ${PT()?`<label for="st-n">Her name</label><input id="st-n" data-s="name" maxlength="30" value="${esc(S.name)}">`:''}
+ <label for="pinSet">${S.pin?'PIN is on':'Set a 4-digit PIN'}</label><div class="row"><input id="pinSet" inputmode="numeric" maxlength="4" style="max-width:140px" placeholder="1234"><button class="btn" data-a="pinset">${S.pin?'Change':'Set PIN'}</button>${S.pin?'<button class="btn ghost" data-a="pinoff">Remove</button>':''}</div>
+ <p class="muted" style="margin-top:14px">${PAYWALL?'':'Personal build: every feature is unlocked.'}</p></div>
+ <div class="card"><h3>Your data</h3><p class="muted">Everything stays on this device${NATIVE?'':' (this browser)'}. Calendar sync only sends the events you choose to your calendar.</p>
+ <div class="row"><button class="btn ghost" data-a="copydata">Copy backup</button>${NATIVE?'<button class="btn ghost" data-a="sharedata">Share backup</button>':''}<button class="btn ghost" data-a="clear">${armClear?'Tap again to erase all':'Clear all data'}</button>${S.sample?'':'<button class="btn ghost" data-a="sample">Load sample data</button>'}</div>
+ <label for="restore">Restore from backup</label><textarea id="restore" placeholder="Paste a backup here" style="min-height:80px"></textarea><button class="btn ghost" data-a="restore" style="margin-top:8px">Restore</button></div></div>`}
+function moreV(){const subs=[['ins','Insights'],['rem','Reminders'],['gcal','Calendar sync'],['set','Settings']];
+ return `<div class="subtabs" role="tablist">${subs.map(([k,l])=>`<button class="chip" data-a="more" data-v="${k}" aria-pressed="${more===k}">${l}</button>`).join('')}</div>${{ins:insights,rem:reminders,gcal:calSection,set:settings}[more]()}`}
+
+/* ---------- plumbing ---------- */
+function render(){$('#main').innerHTML={today,cal,us,meds,more:moreV}[tab]();
+ document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.t===tab));
+ $('#modeBadge').textContent=PT()?(S.name?'With '+S.name:'Partner mode'):'My cycle'}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)}
+function copy(text,ok){try{navigator.clipboard.writeText(text).then(()=>toast(ok),()=>toast('Copy blocked. Select the text and copy it.'))}catch(e){toast('Copy blocked. Select the text and copy it.')}}
+function share(text){if(NATIVE){try{NATIVE.share(text);return}catch(e){}}copy(text,'Copied')}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a,v=t.dataset.v;
+ if(a!=='clear')armClear=false;
+ if(a==='tab'){tab=t.dataset.t;if(tab==='today')sel=TODAY;window.scrollTo(0,0)}
+ else if(a==='more')more=v;
+ else if(a==='flow')setLog(sel,{flow:+v});
+ else if(a==='sym'){const s=new Set(lg(sel).sym||[]);s.has(v)?s.delete(v):s.add(v);setLog(sel,{sym:[...s]})}
+ else if(a==='mood')setLog(sel,{mood:lg(sel).mood===v?'':v});
+ else if(a==='pill')setLog(sel,{pill:!lg(sel).pill});
+ else if(a==='pilltoday'){setLog(TODAY,{pill:!lg(TODAY).pill});toast(lg(TODAY).pill?'Pill logged':'Pill unmarked')}
+ else if(a==='pillyest'){setLog(add(TODAY,-1),{pill:true});toast('Logged for yesterday')}
+ else if(a==='quick'){if((lg(TODAY).flow||0)<2){setLog(TODAY,{flow:3});toast('Logged. Tips updated.')}}
+ else if(a==='day')sel=t.dataset.d;
+ else if(a==='mon'){const[y,m]=view.split('-').map(Number);const d=new Date(y,m-1+(+v),1);view=d.getFullYear()+'-'+pad(d.getMonth()+1)}
+ else if(a==='mode'){S.mode=v;save()}
+ else if(a==='style'){S.rel.style=v;save()}
+ else if(a==='setupdone'){S.setup=true;save();toast('All set')}
+ else if(a==='hol'){S.hol[v]=!S.hol[v];save()}
+ else if(a==='adddate'){const l=$('#nd-l').value.trim(),d=$('#nd-d').value,ty=$('#nd-t').value;if(!valid(d)){toast('Pick a date');return}
+  S.dates.push({id:Date.now().toString(36),label:l||(ty==='birthday'?POSS()+' birthday':'Special day'),date:d,type:ty==='birthday'?'birthday':'custom',yearly:ty!=='once'});save();toast('Date added')}
+ else if(a==='deldate'){S.dates=S.dates.filter(x=>x.id!==v);save()}
+ else if(a==='annday'){const n=+v,s=new Set(S.notif.ann);s.has(n)?s.delete(n):s.add(n);S.notif.ann=[...s].sort((x,y)=>y-x);save()}
+ else if(a==='pillrem'){S.notif.pill=!S.notif.pill;save()}
+ else if(a==='calopt'){S.cal[v]=!S.cal[v];save()}
+ else if(a==='perm'){if(NATIVE){try{NATIVE.requestPerm(v)}catch(err){}}return}
+ else if(a==='calsync')calSync(false);
+ else if(a==='calclear'){if(NATIVE){let n=0;try{n=NATIVE.clearCalendar()}catch(err){}S.cal.last='';save();toast('Removed '+n+' Ebb events')}}
+ else if(a==='copyics'){copy(ics(),'Calendar copied as .ics');return}
+ else if(a==='copyrep'){copy($('#rep').value,'Report copied');return}
+ else if(a==='sharerep'){share($('#rep').value);return}
+ else if(a==='copydata'){copy(JSON.stringify(S),'Backup copied');return}
+ else if(a==='sharedata'){share(JSON.stringify(S));return}
+ else if(a==='restore'){try{const o=JSON.parse($('#restore').value);if(!o||typeof o.logs!=='object')throw 0;const b=blank();S=Object.assign(b,o);for(const k of['med','rel','hol','fav','notif','cal'])S[k]=Object.assign(b[k],o[k]||{});save();toast('Restored')}catch(err){toast('That backup could not be read');return}}
+ else if(a==='clear'){if(!armClear)armClear=true;else{const keep={mode:S.mode,name:S.name,setup:S.setup,rel:S.rel,dates:S.dates,fav:S.fav,hol:S.hol,notif:S.notif,cal:S.cal};S=Object.assign(blank(),keep);armClear=false;save();toast('Cycle data erased')}}
+ else if(a==='sample'){const s=seed();S.logs=s.logs;S.sample=true;save()}
+ else if(a==='pinset'){const p=$('#pinSet').value;if(!/^\d{4}$/.test(p)){toast('Use 4 digits');return}S.pin=p;save();toast('PIN set')}
+ else if(a==='pinoff'){S.pin='';save()}
+ else if(a==='unlockpin'){if($('#pinIn').value===S.pin){$('#lock').classList.remove('on');$('#pinIn').value=''}else toast('Wrong PIN');return}
+ render()});
+document.addEventListener('change',e=>{const el=e.target;const f=el.dataset.f,s=el.dataset.s;if(!f&&!s)return;let v=el.value;
+ if(f){if(f==='shotWeeks')v=Math.max(1,Math.min(52,+v||13));if(f==='method'&&v==='none')S.med.since='';S.med[f]=v}
+ else{if(el.dataset.num)v=+v;setPath(s,v);if(s==='cal.id'&&v){save();calSync(false)}}
+ save();render();if(!s||s!=='cal.id')toast('Saved')});
+$('#pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('[data-a=unlockpin]').click()});
+window.ebbPerm=(k,ok)=>{toast(ok?'Allowed':'Permission not given');if(ok)pushNative();render()};
+window.ebbResume=()=>{if(d2s(new Date())!==TODAY)location.reload()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.ebbResume()});
+if(S.pin)$('#lock').classList.add('on');
+render();
+if(NATIVE){pushNative();try{if(S.cal.id&&NATIVE.hasPerm('cal')&&!(S.cal.last||'').startsWith(TODAY))calSync(true)}catch(e){}}
+}
+</script>
+</body>
+</html>
